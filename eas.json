@@ -1,0 +1,32 @@
+{
+  "cli": {
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "environment": "development",
+      "env": {
+        "EXPO_PUBLIC_PLAYNEXUS_URL": "https://playnexus.ir"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "environment": "preview",
+      "env": {
+        "EXPO_PUBLIC_PLAYNEXUS_URL": "https://playnexus.ir"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "environment": "production",
+      "env": {
+        "EXPO_PUBLIC_PLAYNEXUS_URL": "https://playnexus.ir"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
