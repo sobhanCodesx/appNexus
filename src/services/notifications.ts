@@ -1,9 +1,6 @@
-import Constants from 'expo-constants';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
-
-import { PLAYNEXUS_URL } from '@/config/app';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -14,9 +11,14 @@ Notifications.setNotificationHandler({
   }),
 });
 
-export async function getPushToken(
+export type PushRegistration = {
+  token: string;
+  provider: 'fcm' | 'apns';
+};
+
+export async function getPushRegistration(
   devicePushToken?: Notifications.DevicePushToken,
-): Promise<string | null> {
+): Promise<PushRegistration | null> {
   if (!Device.isDevice) return null;
 
   if (Platform.OS === 'android') {
@@ -33,30 +35,15 @@ export async function getPushToken(
   const permission = current.granted ? current : await Notifications.requestPermissionsAsync();
   if (!permission.granted) return null;
 
-  const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
-  if (!projectId) {
-    throw new Error('EAS projectId is not configured. Link this app to an EAS project first.');
+  const nativeToken = devicePushToken ?? (await Notifications.getDevicePushTokenAsync());
+  if (typeof nativeToken.data !== 'string' || nativeToken.data.trim() === '') {
+    throw new Error('Native push token is unavailable on this device.');
   }
 
-  const options = {
-    projectId,
-    ...(devicePushToken ? { devicePushToken } : {}),
+  return {
+    token: nativeToken.data,
+    provider: Platform.OS === 'android' ? 'fcm' : 'apns',
   };
-
-  const proxyUrl = new URL('/api/mobile/push/expo-token', PLAYNEXUS_URL).toString();
-
-  try {
-    return (
-      await Notifications.getExpoPushTokenAsync({
-        ...options,
-        url: proxyUrl,
-      })
-    ).data;
-  } catch (proxyError) {
-    console.warn('PlayNexus push token proxy failed; trying Expo directly:', proxyError);
-
-    return (await Notifications.getExpoPushTokenAsync(options)).data;
-  }
 }
 
 export function notificationUrl(notification: Notifications.Notification): string | null {
