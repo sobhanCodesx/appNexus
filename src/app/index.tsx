@@ -20,7 +20,7 @@ import { WebView, type WebViewMessageEvent, type WebViewNavigation } from 'react
 
 import { isPlayNexusConfigured, PLAYNEXUS_ORIGIN, PLAYNEXUS_URL } from '@/config/app';
 import { getInstallationId } from '@/services/installation';
-import { getPushToken, notificationUrl } from '@/services/notifications';
+import { getPushRegistration, notificationUrl } from '@/services/notifications';
 
 type BridgeMessage = {
   protocol?: string;
@@ -75,21 +75,22 @@ export default function PlayNexusScreen() {
     registrationInFlight.current = true;
 
     try {
-      const [installationId, pushToken] = await Promise.all([
+      const [installationId, pushRegistration] = await Promise.all([
         getInstallationId(),
-        getPushToken(devicePushToken),
+        getPushRegistration(devicePushToken),
       ]);
 
-      if (!pushToken || registeredToken.current === pushToken) {
+      if (!pushRegistration || registeredToken.current === pushRegistration.token) {
         registrationInFlight.current = false;
         return;
       }
 
-      pendingRegistrationToken.current = pushToken;
+      pendingRegistrationToken.current = pushRegistration.token;
 
       const payload = {
         installation_id: installationId,
-        push_token: pushToken,
+        push_token: pushRegistration.token,
+        push_provider: pushRegistration.provider,
         platform: Platform.OS,
         device_name: Application.applicationName ?? undefined,
         app_version: Application.nativeApplicationVersion ?? undefined,
@@ -194,8 +195,7 @@ export default function PlayNexusScreen() {
     const tokenSubscription = Notifications.addPushTokenListener((token) => {
       registeredToken.current = null;
       pendingRegistrationToken.current = null;
-      registrationInFlight.current = false;
-      void registerDevice(token);
+      if (!registrationInFlight.current) void registerDevice(token);
     });
 
     return () => {
