@@ -31,9 +31,11 @@ const empty: ContentDetailPayload = {
 };
 
 export default function ContentDetailScreen() {
-  const params = useLocalSearchParams<{ slug: string; list?: string }>();
+  const params = useLocalSearchParams<{ slug: string; list?: string; startAt?: string }>();
   const slug = Array.isArray(params.slug) ? params.slug[0] : params.slug;
   const list = Array.isArray(params.list) ? params.list[0] : params.list;
+  const startAtRaw = Array.isArray(params.startAt) ? params.startAt[0] : params.startAt;
+  const startAt = Math.max(0, Number.parseInt(startAtRaw || '0', 10) || 0);
   const path = '/contents/' + encodeURIComponent(slug || '') + (list ? '?list=' + encodeURIComponent(list) : '');
   const { data, loading, error } = useApiResource<ContentDetailPayload>(path, empty);
   const content = data.content;
@@ -79,6 +81,7 @@ export default function ContentDetailScreen() {
               source={String(content.video_url)}
               thumbnail={poster ? String(poster) : null}
               duration={content.duration || undefined}
+              initialPosition={startAt}
             />
           ) : (
             <ImageHero uri={poster ? String(poster) : null} />
@@ -154,15 +157,20 @@ function NativeVideo({
   source,
   thumbnail,
   duration,
+  initialPosition = 0,
 }: {
   id: number;
   source: string;
   thumbnail?: string | null;
   duration?: number;
+  initialPosition?: number;
 }) {
   const [posterVisible, setPosterVisible] = useState(true);
   const player = useVideoPlayer({ uri: source }, (instance) => {
     instance.timeUpdateEventInterval = 15;
+    if (initialPosition > 0) {
+      instance.currentTime = initialPosition;
+    }
   });
 
   useEventListener(player, 'timeUpdate', ({ currentTime }) => {
