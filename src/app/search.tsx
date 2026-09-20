@@ -84,11 +84,22 @@ export default function SearchScreen() {
           }
 
           const title = String(item.data.name || item.data.title || 'PlayNexus');
+          const slug = typeof item.data.slug === 'string' ? item.data.slug : '';
           return (
-            <View style={styles.resultRow}>
+            <PressableScale
+              haptic
+              style={styles.resultRow}
+              onPress={() => {
+                if (!slug) return;
+                if (item.type === 'channel') {
+                  router.push({ pathname: '/channel/[slug]', params: { slug } });
+                } else {
+                  router.push({ pathname: '/product/[slug]', params: { slug } });
+                }
+              }}>
               <Text style={styles.resultType}>{item.type === 'channel' ? 'CHANNEL' : 'STORE'}</Text>
               <Text style={styles.resultTitle}>{title}</Text>
-            </View>
+            </PressableScale>
           );
         }}
         ListEmptyComponent={
