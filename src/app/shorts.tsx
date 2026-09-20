@@ -264,7 +264,7 @@ function ShortItem({
         <View style={styles.channelRow}>
           {item.channel?.logo_url || item.channel?.avatar_url ? (
             <Image
-              source={{ uri: item.channel.avatar_url }}
+              source={{ uri: String(item.channel.logo_url || item.channel.avatar_url) }}
               style={styles.channelAvatar}
               contentFit="cover"
               cachePolicy="memory-disk"
