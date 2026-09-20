@@ -2,7 +2,7 @@ import { FlashList } from '@shopify/flash-list';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ExpandableText } from '@/components/ui/expandable-text';
@@ -11,6 +11,7 @@ import { PageHeader } from '@/components/ui/page-header';
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { Screen } from '@/components/ui/screen';
 import { SkeletonBox } from '@/components/ui/skeleton';
+import { VideoPreviewSurface, videoPreviewUrl } from '@/components/video/video-preview-surface';
 import { fontFamily, fontWeight, layout, palette, radii, shadow, spacing, typeScale } from '@/design';
 import { useApiResource } from '@/hooks/use-api-resource';
 import { usePaginatedResource } from '@/hooks/use-paginated-resource';
@@ -35,6 +36,7 @@ type TrendingGame = {
 };
 
 const fallback = require('../../assets/images/logo-glow.png');
+const feedPreviewViewabilityConfig = { itemVisiblePercentThreshold: 72, minimumViewTime: 700 };
 
 function slugOf(item: FeedItem) {
   return item.slug || item.feed_slug || String(item.id);
@@ -47,11 +49,25 @@ function mediaOf(item: FeedItem) {
 
 export default function FeedScreen() {
   const [mode, setMode] = useState<Mode>('for-you');
+  const [activePreviewId, setActivePreviewId] = useState<number | null>(null);
   const feed = usePaginatedResource<FeedItem>(
     '/feed?tab=' + (mode === 'trending' ? 'for-you' : mode) + '&per_page=12',
     15_000,
   );
   const trending = useApiResource<{ games: TrendingGame[] }>('/feed/trending', { games: [] }, 30_000);
+
+  const onViewableItemsChanged = useCallback(({
+    viewableItems,
+  }: {
+    viewableItems: { item: FeedItem; isViewable?: boolean }[];
+  }) => {
+    const candidate = viewableItems.find((token) => (
+      token.isViewable
+      && token.item.type === 'video'
+      && Boolean(videoPreviewUrl(token.item))
+    ));
+    setActivePreviewId(candidate?.item.id ?? null);
+  }, []);
 
   return (
     <Screen>
@@ -92,7 +108,11 @@ export default function FeedScreen() {
           onEndReachedThreshold={0.45}
           ListFooterComponent={feed.loadingMore ? <LoadingMore /> : null}
           contentContainerStyle={styles.content}
-          renderItem={({ item }) => <FeedCard item={item} />}
+          renderItem={({ item }) => (
+            <FeedCard item={item} previewActive={activePreviewId === item.id} />
+          )}
+          onViewableItemsChanged={onViewableItemsChanged}
+          viewabilityConfig={feedPreviewViewabilityConfig}
           ListEmptyComponent={feed.loading ? <FeedSkeleton /> : <Empty />}
         />
       )}
@@ -100,7 +120,7 @@ export default function FeedScreen() {
   );
 }
 
-function FeedCard({ item }: { item: FeedItem }) {
+function FeedCard({ item, previewActive }: { item: FeedItem; previewActive: boolean }) {
   const image = mediaOf(item);
   const slug = slugOf(item);
   const author = item.author?.name || item.channel?.name || 'PlayNexus';
@@ -126,6 +146,7 @@ function FeedCard({ item }: { item: FeedItem }) {
         {image ? (
           <View style={styles.feedMedia}>
             <Image source={{ uri: String(image) }} style={StyleSheet.absoluteFill} contentFit="cover" />
+            {isVideo ? <VideoPreviewSurface item={item} active={previewActive} /> : null}
             <LinearGradient
               colors={['rgba(3,5,9,0.00)', 'rgba(3,5,9,0.12)', 'rgba(3,5,9,0.70)']}
               style={StyleSheet.absoluteFill}
@@ -134,7 +155,7 @@ function FeedCard({ item }: { item: FeedItem }) {
               <View style={[styles.mediaDot, isVideo && styles.mediaDotVideo]} />
               <Text style={styles.mediaBadgeText}>{isVideo ? 'VIDEO' : 'FEED'}</Text>
             </View>
-            {isVideo ? <View style={styles.playOrb}><Text style={styles.playGlyph}>▶</Text></View> : null}
+            {isVideo && !previewActive ? <View style={styles.playOrb}><Text style={styles.playGlyph}>▶</Text></View> : null}
           </View>
         ) : null}
 
