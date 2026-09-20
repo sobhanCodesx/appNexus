@@ -164,21 +164,21 @@ export default function HomeScreen() {
     || data.personalized_home?.followed_games?.length,
   );
 
+  const feedItems = feed.slice(0, 8);
+
   const sections: Section[] = [
     'hero',
-    'videos',
-    'games',
-    'feed',
-    'radar',
+    ...(loading || latestVideos.length ? ['videos' as const] : []),
+    ...(loading || latestGames.length ? ['games' as const] : []),
+    ...(loading || feedItems.length ? ['feed' as const] : []),
+    ...(loading || radar.length ? ['radar' as const] : []),
     'portals',
     ...(showPulse ? ['pulse' as const] : []),
     ...(storePicks.length ? ['featured-products' as const] : []),
     ...(data.fresh_content?.length ? ['fresh' as const] : []),
     ...dynamicSections.map((section) => `dynamic:${section.id}` as Section),
-    'studios',
+    ...(loading || (data.latest_studios || []).length ? ['studios' as const] : []),
   ];
-
-  const feedItems = feed.slice(0, 8);
 
   return (
     <Screen edges={['top', 'left', 'right']}>
