@@ -8,24 +8,26 @@ export type PushRegistration = {
   provider: 'fcm' | 'apns';
 };
 
-type DevicePushTokenLike = {
+export type DevicePushTokenLike = {
   data?: unknown;
 };
 
-type NotificationLike = {
+export type NotificationLike = {
   request?: {
+    identifier?: string;
     content?: {
+      title?: string | null;
+      body?: string | null;
       data?: Record<string, unknown>;
     };
   };
 };
 
 let handlerConfigured = false;
+let androidChannelConfigured = false;
 
-export async function getPushRegistration(
-  devicePushToken?: DevicePushTokenLike,
-): Promise<PushRegistration | null> {
-  if (isExpoGo() || !Device.isDevice) return null;
+export async function configureNativeNotifications() {
+  if (isExpoGo()) return false;
 
   const Notifications = await import('expo-notifications');
 
@@ -41,15 +43,30 @@ export async function getPushRegistration(
     handlerConfigured = true;
   }
 
-  if (Platform.OS === 'android') {
+  if (Platform.OS === 'android' && !androidChannelConfigured) {
     await Notifications.setNotificationChannelAsync('default', {
       name: 'اعلان‌های PlayNexus',
+      description: 'اعلان‌های حساب، محتوا، سفارش و پشتیبانی PlayNexus',
       importance: Notifications.AndroidImportance.HIGH,
       vibrationPattern: [0, 250, 150, 250],
       lightColor: '#208AEF',
       sound: 'default',
+      enableVibrate: true,
+      showBadge: true,
     });
+    androidChannelConfigured = true;
   }
+
+  return true;
+}
+
+export async function getPushRegistration(
+  devicePushToken?: DevicePushTokenLike,
+): Promise<PushRegistration | null> {
+  if (isExpoGo() || !Device.isDevice) return null;
+
+  await configureNativeNotifications();
+  const Notifications = await import('expo-notifications');
 
   const current = await Notifications.getPermissionsAsync();
   const permission = current.granted
@@ -81,4 +98,15 @@ export function notificationUrl(
 ): string | null {
   const url = notification.request?.content?.data?.url;
   return typeof url === 'string' ? url : null;
+}
+
+export function notificationSummary(notification: NotificationLike) {
+  const content = notification.request?.content;
+
+  return {
+    id: notification.request?.identifier || String(Date.now()),
+    title: content?.title || 'PlayNexus',
+    body: content?.body || '',
+    url: notificationUrl(notification),
+  };
 }
