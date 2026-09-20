@@ -1,69 +1,126 @@
-import {
-  BlurMask,
-  Canvas,
-  Circle,
-  Fill,
-  LinearGradient,
-  RadialGradient,
-  Rect,
-  vec,
-} from '@shopify/react-native-skia';
+import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { palette } from '@/design';
 
+/**
+ * A premium static backdrop that deliberately avoids full-screen Skia blur masks.
+ * It keeps the cinematic PlayNexus look while reducing continuous GPU work on
+ * mid-range Android devices and during fast list scrolling.
+ */
 export function AmbientBackground() {
   const { width, height } = useWindowDimensions();
+  const topOrb = Math.max(280, width * 0.82);
+  const lowerOrb = Math.max(320, width * 0.92);
 
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-      <Canvas style={StyleSheet.absoluteFill}>
-        <Fill>
-          <LinearGradient
-            start={vec(0, 0)}
-            end={vec(width, height)}
-            colors={[palette.ink, '#07101B', '#04070C', palette.ink]}
-          />
-        </Fill>
+      <LinearGradient
+        colors={[palette.ink, '#06101A', '#04080E', palette.ink]}
+        locations={[0, 0.28, 0.68, 1]}
+        start={{ x: 0.16, y: 0 }}
+        end={{ x: 0.86, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
 
-        <Circle cx={width * 0.92} cy={78} r={width * 0.62}>
-          <RadialGradient
-            c={vec(width * 0.92, 78)}
-            r={width * 0.62}
-            colors={[
-              'rgba(24,124,255,0.18)',
-              'rgba(88,244,255,0.05)',
-              'rgba(24,124,255,0)',
+      <LinearGradient
+        colors={[
+          'rgba(24,124,255,0.22)',
+          'rgba(88,244,255,0.055)',
+          'rgba(24,124,255,0)',
+        ]}
+        start={{ x: 1, y: 0 }}
+        end={{ x: 0.12, y: 1 }}
+        style={[
+          styles.orb,
+          {
+            width: topOrb,
+            height: topOrb,
+            borderRadius: topOrb,
+            top: -topOrb * 0.52,
+            right: -topOrb * 0.42,
+          },
+        ]}
+      />
+
+      <LinearGradient
+        colors={[
+          'rgba(167,123,255,0.15)',
+          'rgba(255,85,213,0.035)',
+          'rgba(167,123,255,0)',
+        ]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[
+          styles.orb,
+          {
+            width: lowerOrb,
+            height: lowerOrb,
+            borderRadius: lowerOrb,
+            top: height * 0.40,
+            left: -lowerOrb * 0.62,
+          },
+        ]}
+      />
+
+      <View style={[styles.horizon, { top: height * 0.285 }]}>
+        <LinearGradient
+          colors={[
+            'rgba(88,244,255,0)',
+            'rgba(88,244,255,0.10)',
+            'rgba(88,244,255,0)',
+          ]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={StyleSheet.absoluteFill}
+        />
+      </View>
+
+      <View style={styles.grid}>
+        {Array.from({ length: 6 }).map((_, index) => (
+          <View
+            key={index}
+            style={[
+              styles.gridLine,
+              { left: ((index + 1) * width) / 7 },
             ]}
           />
-          <BlurMask blur={34} style="normal" />
-        </Circle>
+        ))}
+      </View>
 
-        <Circle cx={width * 0.02} cy={height * 0.58} r={width * 0.60}>
-          <RadialGradient
-            c={vec(width * 0.02, height * 0.58)}
-            r={width * 0.60}
-            colors={[
-              'rgba(167,123,255,0.11)',
-              'rgba(255,85,213,0.025)',
-              'rgba(167,123,255,0)',
-            ]}
-          />
-          <BlurMask blur={38} style="normal" />
-        </Circle>
-
-        <Rect x={0} y={height * 0.28} width={width} height={1}>
-          <LinearGradient
-            start={vec(0, 0)}
-            end={vec(width, 0)}
-            colors={[
-              'rgba(88,244,255,0)',
-              'rgba(88,244,255,0.055)',
-              'rgba(88,244,255,0)',
-            ]}
-          />
-        </Rect>
-      </Canvas>
+      <LinearGradient
+        colors={[
+          'rgba(3,5,9,0)',
+          'rgba(3,5,9,0.08)',
+          'rgba(3,5,9,0.30)',
+        ]}
+        locations={[0, 0.65, 1]}
+        style={StyleSheet.absoluteFill}
+      />
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  orb: {
+    position: 'absolute',
+    opacity: 0.88,
+  },
+  horizon: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 1,
+  },
+  grid: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.16,
+  },
+  gridLine: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    width: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(255,255,255,0.035)',
+  },
+});
