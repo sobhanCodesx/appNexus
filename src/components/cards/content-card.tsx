@@ -3,7 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { PressableScale } from '@/components/ui/pressable-scale';
-import { fontWeight, palette, radii, shadow, spacing, typeScale } from '@/design';
+import { fontFamily, fontWeight, palette, radii, shadow, spacing, typeScale } from '@/design';
 import type { ContentCard as ContentItem } from '@/types/api';
 
 const fallbackImage = require('../../../assets/images/logo-glow.png');
@@ -135,6 +135,7 @@ const styles = StyleSheet.create({
   typeText: {
     color: palette.white,
     fontSize: 8,
+    fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
     letterSpacing: 0.8,
   },
@@ -151,6 +152,7 @@ const styles = StyleSheet.create({
   durationText: {
     color: palette.textMuted,
     fontSize: 9,
+    fontFamily: fontFamily.bold,
     fontWeight: fontWeight.bold,
   },
   meta: {
@@ -161,6 +163,7 @@ const styles = StyleSheet.create({
   game: {
     color: palette.cyan,
     fontSize: 9,
+    fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
     letterSpacing: 0.9,
     marginBottom: 6,
@@ -169,6 +172,7 @@ const styles = StyleSheet.create({
     color: palette.white,
     fontSize: typeScale.titleSm,
     lineHeight: 25,
+    fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
     textAlign: 'right',
     letterSpacing: -0.2,
@@ -199,6 +203,7 @@ const styles = StyleSheet.create({
   footerText: {
     color: palette.textMuted,
     fontSize: typeScale.micro,
+    fontFamily: fontFamily.medium,
     fontWeight: fontWeight.medium,
   },
   openOrb: {
