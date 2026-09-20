@@ -2,7 +2,7 @@ import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { fontWeight, layout, palette, shadow, spacing, typeScale } from '@/design';
+import { fontFamily, fontWeight, layout, palette, shadow, spacing, typeScale } from '@/design';
 import { LivePulse } from './motion-primitives';
 import { PressableScale } from './pressable-scale';
 
@@ -81,6 +81,7 @@ const styles = StyleSheet.create({
   subtitle: {
     color: palette.textMuted,
     fontSize: typeScale.micro,
+    fontFamily: fontFamily.bold,
     fontWeight: fontWeight.bold,
     letterSpacing: 0.7,
   },
@@ -88,6 +89,7 @@ const styles = StyleSheet.create({
     color: palette.white,
     fontSize: 29,
     lineHeight: 34,
+    fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
     textAlign: 'right',
     letterSpacing: -0.7,
