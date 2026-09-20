@@ -234,16 +234,15 @@ function NativeVideo({
   useEffect(() => clearControlsTimer, [clearControlsTimer]);
 
   useEffect(() => {
-    if (!isPlaying) {
-      clearControlsTimer();
-      setControlsVisible(true);
-      return;
-    }
-
     clearControlsTimer();
+
+    if (!isPlaying) return;
+
     controlsTimer.current = setTimeout(() => {
       setControlsVisible(false);
     }, 1100);
+
+    return clearControlsTimer;
   }, [clearControlsTimer, isPlaying]);
 
   useEffect(() => {
