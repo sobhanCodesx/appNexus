@@ -80,8 +80,9 @@ export function HeroSpotlight({
               source={source}
               style={StyleSheet.absoluteFill}
               contentFit="cover"
-              transition={260}
+              transition={220}
               priority="high"
+              cachePolicy="memory-disk"
             />
           </Animated.View>
 
