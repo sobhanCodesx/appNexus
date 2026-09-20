@@ -14,8 +14,7 @@ import {
   spacing,
   typeScale,
 } from '@/design';
-import { useApiResource } from '@/hooks/use-api-resource';
-import type { Paginated } from '@/types/api';
+import { usePaginatedResource } from '@/hooks/use-paginated-resource';
 
 type Order = {
   id: number;
@@ -52,10 +51,8 @@ const statusTone: Record<string, string> = {
 };
 
 export default function OrdersScreen() {
-  const { data, refreshing, refresh } = useApiResource<Paginated<Order>>(
-    '/orders',
-    { data: [] },
-  );
+  const { data, refreshing, refresh, loadMore, loadingMore } =
+    usePaginatedResource<Order>('/orders');
 
   const orders = data.data || [];
   const activeCount = orders.filter((order) =>
@@ -181,6 +178,9 @@ export default function OrdersScreen() {
         }}
         refreshing={refreshing}
         onRefresh={refresh}
+        onEndReached={() => void loadMore()}
+        onEndReachedThreshold={0.45}
+        ListFooterComponent={loadingMore ? <View style={styles.loadingMore}><Text style={styles.loadingMoreText}>سفارش‌های بیشتر…</Text></View> : null}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
         ListEmptyComponent={
@@ -438,6 +438,8 @@ const styles = StyleSheet.create({
     borderColor: palette.cyan,
     transform: [{ rotate: '45deg' }],
   },
+  loadingMore: { paddingVertical: spacing.lg, alignItems: 'center' },
+  loadingMoreText: { color: palette.textDim, fontSize: 10 },
   empty: {
     paddingTop: 80,
     alignItems: 'center',
