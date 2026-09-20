@@ -10,6 +10,7 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - 'app.json'
+      - 'eas.json'
       - 'tsconfig.json'
 
 jobs:
@@ -24,3 +25,8 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
+      - name: Bundle Android app
+        env:
+          EXPO_PUBLIC_PLAYNEXUS_URL: https://playnexus.ir
+          EXPO_PUBLIC_PLAYNEXUS_API_URL: https://playnexus.ir/api/v1
+        run: npx expo export --platform android --output-dir /tmp/playnexus-export --clear
