@@ -119,10 +119,6 @@ function ShortItem({
     }
   }, [active, item.video_url, manualPaused, player]);
 
-  useEffect(() => {
-    if (!active) setManualPaused(false);
-  }, [active]);
-
   const requireAuth = (error: unknown) => {
     if (error instanceof ApiError && error.status === 401) {
       router.push('/auth/login');
