@@ -11,6 +11,7 @@ import { PressableScale } from '@/components/ui/pressable-scale';
 import { Screen } from '@/components/ui/screen';
 import { fontFamily, layout, palette, radii, spacing } from '@/design';
 import { useApiResource } from '@/hooks/use-api-resource';
+import { usePaginatedResource } from '@/hooks/use-paginated-resource';
 import type { ContentCard as ContentItem, Paginated } from '@/types/api';
 
 type Mode = 'for-you' | 'following' | 'trending';
@@ -26,9 +27,8 @@ type TrendingGame = {
 export default function FeedScreen() {
   const [mode, setMode] = useState<Mode>('for-you');
   const feedPath = '/feed?tab=' + mode;
-  const feed = useApiResource<Paginated<ContentItem>>(
+  const feed = usePaginatedResource<ContentItem>(
     mode === 'trending' ? '/feed?tab=for-you' : feedPath,
-    { data: [] },
     15_000,
   );
   const trending = useApiResource<{ games: TrendingGame[] }>(
@@ -92,6 +92,9 @@ export default function FeedScreen() {
           data={feed.data.data || []}
           refreshing={feed.refreshing}
           onRefresh={feed.refresh}
+          onEndReached={() => void feed.loadMore()}
+          onEndReachedThreshold={0.45}
+          ListFooterComponent={feed.loadingMore ? <LoadingMore /> : null}
           contentContainerStyle={styles.content}
           renderItem={({ item }) => (
             <View style={styles.card}>
@@ -110,6 +113,10 @@ export default function FeedScreen() {
       )}
     </Screen>
   );
+}
+
+function LoadingMore() {
+  return <View style={styles.loadingMore}><Text style={styles.loadingMoreText}>در حال دریافت ادامه…</Text></View>;
 }
 
 function Empty() {
@@ -149,6 +156,8 @@ const styles = StyleSheet.create({
   gameName: { color: palette.white, fontFamily: fontFamily.black, fontSize: 17, marginTop: 3 },
   gameMeta: { color: palette.textMuted, fontFamily: fontFamily.regular, fontSize: 10, marginTop: 3, textAlign: 'right' },
   gameImage: { width: 68, height: 68, borderRadius: 20, backgroundColor: palette.surface },
+  loadingMore: { paddingVertical: spacing.lg, alignItems: 'center' },
+  loadingMoreText: { color: palette.textDim, fontFamily: fontFamily.regular, fontSize: 10 },
   empty: { paddingTop: 100, alignItems: 'center' },
   emptyTitle: { color: palette.white, fontFamily: fontFamily.black, fontSize: 18 },
   emptyText: { color: palette.textMuted, fontFamily: fontFamily.regular, marginTop: 6, textAlign: 'center' },
