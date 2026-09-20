@@ -5,7 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { useEffect, useMemo, useState } from 'react';
-import { Share, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 
 import { ContentCard } from '@/components/cards/content-card';
 import { PressableScale } from '@/components/ui/pressable-scale';
@@ -64,6 +64,9 @@ export default function ContentDetailScreen() {
   return (
     <Screen edges={['left', 'right']}>
       <View style={styles.root}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}>
         {isVideo ? (
           <NativeVideo
             id={content.id}
@@ -73,14 +76,6 @@ export default function ContentDetailScreen() {
         ) : (
           <ImageHero uri={content.thumbnail_url || content.image_url || content.cover_url} />
         )}
-
-        <View style={styles.topControls}>
-          <RoundControl label="‹" onPress={() => router.back()} />
-          <RoundControl
-            label="↗"
-            onPress={() => void Share.share({ title: content.title, message: content.title })}
-          />
-        </View>
 
         <View style={styles.body}>
           <View style={styles.channelRow}>
@@ -127,6 +122,15 @@ export default function ContentDetailScreen() {
               ))}
             </View>
           ) : null}
+        </View>
+        </ScrollView>
+
+        <View pointerEvents="box-none" style={styles.topControls}>
+          <RoundControl label="‹" onPress={() => router.back()} />
+          <RoundControl
+            label="↗"
+            onPress={() => void Share.share({ title: content.title, message: content.title })}
+          />
         </View>
       </View>
     </Screen>
@@ -253,6 +257,7 @@ function RoundControl({ label, onPress }: { label: string; onPress: () => void }
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  scrollContent: { paddingBottom: 24 },
   videoFrame: {
     width: '100%',
     aspectRatio: 16 / 9,
@@ -266,6 +271,7 @@ const styles = StyleSheet.create({
   },
   topControls: {
     position: 'absolute',
+    zIndex: 10,
     top: 54,
     left: layout.screenPadding,
     right: layout.screenPadding,
