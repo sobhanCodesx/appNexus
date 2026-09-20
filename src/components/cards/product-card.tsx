@@ -42,16 +42,34 @@ export function ProductCard({
   product,
   onPress,
   width = 208,
+  compact = false,
 }: {
   product: ProductSummary;
   onPress?: () => void;
   width?: number | string;
+  compact?: boolean;
 }) {
   const finalPrice = product.pricing?.final_price
     ?? product.pricing?.sale_price
     ?? product.pricing?.regular_price;
 
   const regularPrice = product.pricing?.regular_price;
+  const categoryLabel = (product.category || '').toLowerCase();
+  const hardwareLike = [
+    'تجهیزات',
+    'لوازم',
+    'اکسسوری',
+    'کنسول',
+    'دسته',
+    'هدست',
+    'کیبورد',
+    'ماوس',
+    'شارژ',
+    'پایه',
+    'hardware',
+    'accessor',
+    'console',
+  ].some((keyword) => categoryLabel.includes(keyword));
   const hasDiscount = Boolean(
     product.pricing?.discount_amount
       && product.pricing.discount_amount > 0,
@@ -64,8 +82,13 @@ export function ProductCard({
     <PressableScale
       onPress={onPress}
       pressedScale={0.982}
-      style={[styles.card, { width } as never]}>
-      <View style={styles.imageFrame}>
+      style={[styles.card, compact && styles.compactCard, { width } as never]}>
+      <View
+        style={[
+          styles.imageFrame,
+          compact && styles.compactImageFrame,
+          hardwareLike && styles.hardwareImageFrame,
+        ]}>
         <Image
           source={
             product.cover_url
@@ -73,7 +96,7 @@ export function ProductCard({
               : require('../../../assets/images/logo-glow.png')
           }
           style={StyleSheet.absoluteFill}
-          contentFit="cover"
+          contentFit={hardwareLike ? 'contain' : 'cover'}
           recyclingKey={String(product.id)}
           transition={180}
           cachePolicy="memory-disk"
@@ -115,8 +138,8 @@ export function ProductCard({
         </View>
       </View>
 
-      <View style={styles.copy}>
-        <Text numberOfLines={2} style={styles.title}>{product.title}</Text>
+      <View style={[styles.copy, compact && styles.compactCopy]}>
+        <Text numberOfLines={2} style={[styles.title, compact && styles.compactTitle]}>{product.title}</Text>
 
         <View style={styles.priceRow}>
           <View style={styles.openOrb}>
@@ -156,6 +179,16 @@ const styles = StyleSheet.create({
     width: '100%',
     aspectRatio: 0.80,
     backgroundColor: palette.surface,
+  },
+  compactCard: {
+    borderRadius: radii.lg,
+  },
+  compactImageFrame: {
+    aspectRatio: 0.88,
+  },
+  hardwareImageFrame: {
+    aspectRatio: 1.02,
+    backgroundColor: 'rgba(245,247,250,0.96)',
   },
   topMeta: {
     padding: spacing.sm,
@@ -237,6 +270,9 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     alignItems: 'flex-end',
   },
+  compactCopy: {
+    padding: spacing.sm,
+  },
   title: {
     color: palette.text,
     fontSize: typeScale.bodySm,
@@ -245,6 +281,11 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.black,
     textAlign: 'right',
     minHeight: 42,
+  },
+  compactTitle: {
+    minHeight: 38,
+    fontSize: 13,
+    lineHeight: 19,
   },
   priceRow: {
     width: '100%',
