@@ -64,8 +64,8 @@ function Home({ color }: { color: string }) {
 
 const styles = StyleSheet.create({
   shell: {
-    width: 38,
-    height: 32,
+    width: 34,
+    height: 28,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -74,10 +74,10 @@ const styles = StyleSheet.create({
   },
   aura: {
     position: 'absolute',
-    width: 38,
-    height: 30,
-    borderRadius: 18,
-    backgroundColor: 'rgba(88,244,255,0.10)',
+    width: 34,
+    height: 27,
+    borderRadius: 14,
+    backgroundColor: 'rgba(88,244,255,0.08)',
     borderWidth: 1,
     borderColor: 'rgba(88,244,255,0.18)',
   },
