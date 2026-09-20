@@ -1,13 +1,16 @@
 import { FlashList } from '@shopify/flash-list';
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ContentCard } from '@/components/cards/content-card';
 import { HeroSpotlight } from '@/components/cards/hero-spotlight';
+import { ProductCard } from '@/components/cards/product-card';
 import { RadarCard } from '@/components/cards/radar-card';
 import { StudioCard } from '@/components/cards/studio-card';
 import { Reveal } from '@/components/ui/motion-primitives';
 import { PageHeader } from '@/components/ui/page-header';
+import { PressableScale } from '@/components/ui/pressable-scale';
 import { QuickPortal } from '@/components/ui/quick-portal';
 import { Screen } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section-header';
@@ -24,9 +27,28 @@ import {
 } from '@/design';
 import { useApiResource } from '@/hooks/use-api-resource';
 import { nativeHrefFromUrl } from '@/services/native-navigation';
-import type { HomePayload, HomeSlide } from '@/types/api';
+import type {
+  ContentCard as ContentItem,
+  HomeContentSection,
+  HomeMixedItem,
+  HomePayload,
+  HomeProduct,
+  HomeSlide,
+} from '@/types/api';
 
-type Section = 'hero' | 'pulse' | 'portals' | 'feed' | 'radar' | 'studios';
+type Section =
+  | 'hero'
+  | 'pulse'
+  | 'portals'
+  | 'feed'
+  | 'featured-products'
+  | 'latest-products'
+  | 'categories'
+  | 'channels'
+  | 'radar'
+  | 'fresh'
+  | 'studios'
+  | `dynamic:${number}`;
 
 const initial: HomePayload = {
   slides: [],
@@ -34,12 +56,31 @@ const initial: HomePayload = {
   game_radar: [],
   latest_studios: [],
   personalized_home: null,
+  categories: [],
+  featured_products: [],
+  latest_products: [],
+  content_sections: [],
+  fresh_content: [],
+  channels: [],
 };
 
 export default function HomeScreen() {
   const { data, loading, refreshing, error, refresh } = useApiResource<HomePayload>('/home', initial);
 
-  const sections: Section[] = ['hero', 'pulse', 'portals', 'feed', 'radar', 'studios'];
+  const sections: Section[] = [
+    'hero',
+    'pulse',
+    'portals',
+    'feed',
+    ...(data.featured_products?.length ? ['featured-products' as const] : []),
+    ...(data.latest_products?.length ? ['latest-products' as const] : []),
+    ...(data.categories?.length ? ['categories' as const] : []),
+    ...(data.channels?.length ? ['channels' as const] : []),
+    'radar',
+    ...(data.fresh_content?.length ? ['fresh' as const] : []),
+    ...(data.content_sections || []).map((section) => `dynamic:${section.id}` as Section),
+    'studios',
+  ];
   const feed = data.personalized_home?.feed?.length
     ? data.personalized_home.feed
     : data.latest_feed || [];
@@ -227,6 +268,96 @@ export default function HomeScreen() {
             );
           }
 
+          if (item === 'featured-products') {
+            return (
+              <HomeProductRail
+                title="انتخاب PlayNexus"
+                eyebrow="FEATURED STORE"
+                items={data.featured_products || []}
+                onAll={() => router.push('/store')}
+              />
+            );
+          }
+
+          if (item === 'latest-products') {
+            return (
+              <HomeProductRail
+                title="تازه‌های فروشگاه"
+                eyebrow="NEW IN STORE"
+                items={data.latest_products || []}
+                onAll={() => router.push('/store')}
+              />
+            );
+          }
+
+          if (item === 'categories') {
+            return (
+              <View style={styles.section}>
+                <View style={styles.headerPad}>
+                  <SectionHeader
+                    title="دسته‌بندی‌ها"
+                    eyebrow="STORE MAP"
+                    action="همه دسته‌ها"
+                    onAction={() => router.push('/categories')}
+                  />
+                </View>
+                <ScrollView
+                  horizontal
+                  decelerationRate="fast"
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.entityRail}>
+                  {(data.categories || []).map((category) => (
+                    <HomeEntityCard
+                      key={category.id}
+                      title={category.name}
+                      eyebrow="CATEGORY"
+                      meta={(category.products_count || 0).toLocaleString('fa-IR') + ' محصول'}
+                      imageUrl={category.image_url}
+                      onPress={() => router.push({
+                        pathname: '/category/[slug]',
+                        params: { slug: category.slug },
+                      })}
+                    />
+                  ))}
+                </ScrollView>
+              </View>
+            );
+          }
+
+          if (item === 'channels') {
+            return (
+              <View style={styles.section}>
+                <View style={styles.headerPad}>
+                  <SectionHeader
+                    title="Game Hubs"
+                    eyebrow="FOLLOW THE GAME"
+                    action="همه کانال‌ها"
+                    onAction={() => router.push('/channels')}
+                  />
+                </View>
+                <ScrollView
+                  horizontal
+                  decelerationRate="fast"
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.entityRail}>
+                  {(data.channels || []).map((channel) => (
+                    <HomeEntityCard
+                      key={channel.id}
+                      title={channel.name}
+                      eyebrow="GAME CHANNEL"
+                      meta={(channel.subscribers_count || 0).toLocaleString('fa-IR') + ' دنبال‌کننده'}
+                      imageUrl={channel.image_url}
+                      onPress={() => router.push({
+                        pathname: '/channel/[slug]',
+                        params: { slug: channel.slug },
+                      })}
+                    />
+                  ))}
+                </ScrollView>
+              </View>
+            );
+          }
+
           if (item === 'radar') {
             return (
               <View style={styles.section}>
@@ -256,6 +387,36 @@ export default function HomeScreen() {
                 )}
               </View>
             );
+          }
+
+          if (item === 'fresh') {
+            return (
+              <View style={styles.section}>
+                <View style={styles.headerPad}>
+                  <SectionHeader
+                    title="تازه وارد Nexus"
+                    eyebrow="FRESH 14 DAYS"
+                    action="کشف کن"
+                    onAction={() => router.push('/(tabs)/explore')}
+                  />
+                </View>
+                <ScrollView
+                  horizontal
+                  decelerationRate="fast"
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.entityRail}>
+                  {(data.fresh_content || []).map((entry) => (
+                    <FreshCard key={entry.key} item={entry} />
+                  ))}
+                </ScrollView>
+              </View>
+            );
+          }
+
+          if (item.startsWith('dynamic:')) {
+            const sectionId = Number(item.split(':')[1]);
+            const dynamic = (data.content_sections || []).find((section) => section.id === sectionId);
+            return dynamic ? <DynamicHomeSection section={dynamic} /> : null;
           }
 
           return (
@@ -299,6 +460,176 @@ export default function HomeScreen() {
         contentContainerStyle={styles.content}
       />
     </Screen>
+  );
+}
+
+function HomeProductRail({
+  title,
+  eyebrow,
+  items,
+  onAll,
+}: {
+  title: string;
+  eyebrow: string;
+  items: HomeProduct[];
+  onAll: () => void;
+}) {
+  return (
+    <View style={styles.section}>
+      <View style={styles.headerPad}>
+        <SectionHeader title={title} eyebrow={eyebrow} action="فروشگاه" onAction={onAll} />
+      </View>
+      <ScrollView
+        horizontal
+        decelerationRate="fast"
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.productRail}>
+        {items.map((product) => (
+          <ProductCard
+            key={product.id}
+            product={product}
+            width={202}
+            onPress={() => router.push({
+              pathname: '/product/[slug]',
+              params: { slug: product.slug },
+            })}
+          />
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
+function HomeEntityCard({
+  title,
+  eyebrow,
+  meta,
+  imageUrl,
+  onPress,
+}: {
+  title: string;
+  eyebrow: string;
+  meta?: string;
+  imageUrl?: string | null;
+  onPress?: () => void;
+}) {
+  return (
+    <PressableScale style={styles.entityCard} onPress={onPress}>
+      <Image
+        source={imageUrl ? { uri: imageUrl } : require('../../../assets/images/logo-glow.png')}
+        style={StyleSheet.absoluteFill}
+        contentFit="cover"
+        cachePolicy="memory-disk"
+      />
+      <View style={styles.entityShade} />
+      <View style={styles.entityCopy}>
+        <Text style={styles.entityKicker}>{eyebrow}</Text>
+        <Text numberOfLines={2} style={styles.entityTitle}>{title}</Text>
+        {meta ? <Text style={styles.entityMeta}>{meta}</Text> : null}
+      </View>
+    </PressableScale>
+  );
+}
+
+function FreshCard({ item }: { item: HomeMixedItem }) {
+  const onPress = () => {
+    if (item.type === 'product') {
+      router.push({ pathname: '/product/[slug]', params: { slug: item.slug } });
+    } else {
+      router.push({ pathname: '/content/[slug]', params: { slug: item.slug } });
+    }
+  };
+
+  return (
+    <HomeEntityCard
+      title={item.title}
+      eyebrow={item.eyebrow || (item.type === 'product' ? 'NEW PRODUCT' : 'NEW VIDEO')}
+      meta={item.type === 'video'
+        ? (item.views || 0).toLocaleString('fa-IR') + ' بازدید'
+        : undefined}
+      imageUrl={item.image_url}
+      onPress={onPress}
+    />
+  );
+}
+
+function DynamicHomeSection({ section }: { section: HomeContentSection }) {
+  const isProducts = section.content_type === 'products';
+  const isContent = ['posts', 'videos', 'shorts'].includes(section.content_type);
+
+  return (
+    <View style={styles.section}>
+      <View style={styles.headerPad}>
+        <SectionHeader
+          title={section.title}
+          eyebrow={(section.subtitle || section.content_type).toUpperCase()}
+          action="بیشتر"
+        />
+      </View>
+      <ScrollView
+        horizontal
+        decelerationRate="fast"
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={isProducts ? styles.productRail : styles.entityRail}>
+        {section.items.map((raw) => {
+          if (isProducts) {
+            const product = raw as HomeProduct;
+            return (
+              <ProductCard
+                key={'p-' + product.id}
+                product={product}
+                width={202}
+                onPress={() => router.push({
+                  pathname: '/product/[slug]',
+                  params: { slug: product.slug },
+                })}
+              />
+            );
+          }
+
+          if (isContent) {
+            const content = raw as ContentItem;
+            return (
+              <ContentCard
+                key={'c-' + content.id}
+                item={content}
+                onPress={() => router.push({
+                  pathname: '/content/[slug]',
+                  params: { slug: content.slug },
+                })}
+              />
+            );
+          }
+
+          const entity = raw as {
+            id: number;
+            title: string;
+            slug?: string | null;
+            eyebrow?: string | null;
+            excerpt?: string | null;
+            image_url?: string | null;
+          };
+          const onPress = entity.slug
+            ? section.content_type === 'categories'
+              ? () => router.push({ pathname: '/category/[slug]', params: { slug: entity.slug! } })
+              : section.content_type === 'games'
+                ? () => router.push({ pathname: '/channel/[slug]', params: { slug: entity.slug! } })
+                : () => router.push('/store')
+            : undefined;
+
+          return (
+            <HomeEntityCard
+              key={'e-' + entity.id}
+              title={entity.title}
+              eyebrow={entity.eyebrow || section.content_type}
+              meta={entity.excerpt || undefined}
+              imageUrl={entity.image_url}
+              onPress={onPress}
+            />
+          );
+        })}
+      </ScrollView>
+    </View>
   );
 }
 
@@ -391,6 +722,55 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingHorizontal: layout.screenPadding,
     paddingTop: spacing.md,
+  },
+  productRail: {
+    gap: spacing.md,
+    paddingHorizontal: layout.screenPadding,
+    paddingTop: spacing.sm,
+  },
+  entityRail: {
+    gap: spacing.md,
+    paddingHorizontal: layout.screenPadding,
+    paddingTop: spacing.sm,
+  },
+  entityCard: {
+    width: 212,
+    height: 154,
+    borderRadius: radii.xl,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: palette.line,
+    backgroundColor: palette.surface,
+  },
+  entityShade: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(3,5,9,0.42)',
+  },
+  entityCopy: {
+    marginTop: 'auto',
+    padding: spacing.md,
+    alignItems: 'flex-end',
+    backgroundColor: 'rgba(3,5,9,0.54)',
+  },
+  entityKicker: {
+    color: palette.cyan,
+    fontFamily: fontFamily.black,
+    fontSize: 8,
+    letterSpacing: 0.9,
+  },
+  entityTitle: {
+    color: palette.white,
+    fontFamily: fontFamily.black,
+    fontSize: typeScale.body,
+    textAlign: 'right',
+    marginTop: 3,
+  },
+  entityMeta: {
+    color: palette.textMuted,
+    fontFamily: fontFamily.regular,
+    fontSize: 9,
+    textAlign: 'right',
+    marginTop: 3,
   },
   pulseWrap: {
     paddingHorizontal: layout.screenPadding,
