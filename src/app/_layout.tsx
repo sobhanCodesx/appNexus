@@ -15,6 +15,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ConnectivityBanner } from '@/components/system/connectivity-banner';
+import { GlobalNotificationCenter } from '@/components/system/global-notification-center';
 import { InAppNotificationBanner } from '@/components/system/in-app-notification-banner';
 import { NavigationLoader } from '@/components/system/navigation-loader';
 import { palette } from '@/design';
@@ -113,6 +114,7 @@ export default function RootLayout() {
         </Stack>
         <NavigationLoader />
         <ConnectivityBanner />
+        <GlobalNotificationCenter />
         <InAppNotificationBanner />
       </SafeAreaProvider>
     </GestureHandlerRootView>
