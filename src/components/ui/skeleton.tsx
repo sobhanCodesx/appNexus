@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { Animated, StyleSheet, View, type ViewStyle } from 'react-native';
 
 import { palette, radii } from '@/design';
@@ -10,7 +10,7 @@ export function SkeletonBox({
   style?: ViewStyle | ViewStyle[];
   radius?: number;
 }) {
-  const opacity = useRef(new Animated.Value(0.42)).current;
+  const [opacity] = useState(() => new Animated.Value(0.42));
 
   useEffect(() => {
     const animation = Animated.loop(
