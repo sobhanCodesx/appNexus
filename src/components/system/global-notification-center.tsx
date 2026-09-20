@@ -44,7 +44,11 @@ export function GlobalNotificationCenter() {
   }, []);
 
   useEffect(() => {
-    void sync();
+    const routeSync = setTimeout(() => {
+      void sync();
+    }, 0);
+
+    return () => clearTimeout(routeSync);
   }, [pathname, sync]);
 
   useEffect(() => {
