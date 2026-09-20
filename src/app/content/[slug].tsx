@@ -31,7 +31,7 @@ import {
 import { useApiResource } from '@/hooks/use-api-resource';
 import { apiRequest } from '@/services/api';
 import type { ContentDetailPayload } from '@/types/api';
-import { htmlToPlainText } from '@/utils/text';
+import { htmlToRichBlocks, type RichTextBlock } from '@/utils/text';
 
 const empty: ContentDetailPayload = {
   content: { id: 0, title: '', slug: '' },
@@ -49,7 +49,7 @@ export default function ContentDetailScreen() {
   const isVideo = Boolean(
     content.video_url && (content.type === 'video' || content.type === 'short'),
   );
-  const body = useMemo(() => htmlToPlainText(content.body), [content.body]);
+  const body = useMemo(() => htmlToRichBlocks(content.body), [content.body]);
 
   useEffect(() => {
     if (!content.id) return;
@@ -137,12 +137,16 @@ export default function ContentDetailScreen() {
 
             <ActionBar content={content} />
 
-            {body ? (
+            {body.length ? (
               <View style={styles.articleWrap}>
                 <View style={styles.articleSignal}>
                   <View style={styles.articleSignalCore} />
                 </View>
-                <Text style={styles.article}>{body}</Text>
+                <View style={styles.articleBlocks}>
+                  {body.map((block, index) => (
+                    <ArticleBlock key={index} block={block} />
+                  ))}
+                </View>
               </View>
             ) : null}
 
@@ -198,6 +202,40 @@ export default function ContentDetailScreen() {
       </View>
     </Screen>
   );
+}
+
+function ArticleBlock({ block }: { block: RichTextBlock }) {
+  if (block.type === 'h1') {
+    return <Text style={styles.articleH1}>{block.text}</Text>;
+  }
+
+  if (block.type === 'h2') {
+    return <Text style={styles.articleH2}>{block.text}</Text>;
+  }
+
+  if (block.type === 'h3') {
+    return <Text style={styles.articleH3}>{block.text}</Text>;
+  }
+
+  if (block.type === 'quote') {
+    return (
+      <View style={styles.articleQuote}>
+        <View style={styles.articleQuoteLine} />
+        <Text style={styles.articleQuoteText}>{block.text}</Text>
+      </View>
+    );
+  }
+
+  if (block.type === 'list-item') {
+    return (
+      <View style={styles.articleListRow}>
+        <View style={styles.articleListDot} />
+        <Text style={styles.articleListText}>{block.text}</Text>
+      </View>
+    );
+  }
+
+  return <Text style={styles.articleParagraph}>{block.text}</Text>;
 }
 
 function ChannelCard({
@@ -723,12 +761,88 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     backgroundColor: 'rgba(88,244,255,0.16)',
   },
-  article: {
+  articleBlocks: {
     flex: 1,
+    gap: spacing.md,
+  },
+  articleParagraph: {
     color: '#D8DEE8',
     fontSize: typeScale.body,
     lineHeight: 31,
     textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  articleH1: {
+    color: palette.white,
+    fontSize: 28,
+    lineHeight: 38,
+    fontWeight: fontWeight.black,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    marginTop: spacing.sm,
+  },
+  articleH2: {
+    color: palette.white,
+    fontSize: 23,
+    lineHeight: 33,
+    fontWeight: fontWeight.black,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    marginTop: spacing.md,
+  },
+  articleH3: {
+    color: palette.text,
+    fontSize: 19,
+    lineHeight: 29,
+    fontWeight: fontWeight.black,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    marginTop: spacing.sm,
+  },
+  articleQuote: {
+    minHeight: 86,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(167,123,255,0.18)',
+    backgroundColor: 'rgba(167,123,255,0.055)',
+    padding: spacing.md,
+    flexDirection: 'row-reverse',
+    gap: spacing.sm,
+    alignItems: 'stretch',
+  },
+  articleQuoteLine: {
+    width: 3,
+    borderRadius: 3,
+    backgroundColor: palette.violet,
+  },
+  articleQuoteText: {
+    flex: 1,
+    color: palette.text,
+    fontSize: typeScale.bodySm,
+    lineHeight: 25,
+    fontWeight: fontWeight.bold,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  articleListRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+  },
+  articleListDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 7,
+    backgroundColor: palette.cyan,
+    marginTop: 11,
+  },
+  articleListText: {
+    flex: 1,
+    color: '#D8DEE8',
+    fontSize: typeScale.body,
+    lineHeight: 29,
+    textAlign: 'right',
+    writingDirection: 'rtl',
   },
   related: {
     marginTop: spacing.massive,
