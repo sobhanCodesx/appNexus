@@ -1,5 +1,3 @@
-import 'react-native-gesture-handler';
-
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -30,6 +28,7 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="auth/login" options={{ presentation: 'modal' }} />
           <Stack.Screen name="search" />
+          <Stack.Screen name="content/[slug]" />
         </Stack>
       </SafeAreaProvider>
     </GestureHandlerRootView>
