@@ -76,12 +76,17 @@ export default function HomeScreen() {
     .filter((section) => !['products', 'categories', 'games'].includes(section.content_type))
     .slice(0, 2);
 
+  const showPulse = Boolean(
+    data.personalized_home?.intelligence?.focus_reason
+    || data.personalized_home?.followed_games?.length,
+  );
+
   const sections: Section[] = [
     'hero',
     'feed',
-    'pulse',
     'radar',
     'portals',
+    ...(showPulse ? ['pulse' as const] : []),
     ...(storePicks.length ? ['featured-products' as const] : []),
     ...(data.fresh_content?.length ? ['fresh' as const] : []),
     ...(data.channels?.length ? ['channels' as const] : []),
