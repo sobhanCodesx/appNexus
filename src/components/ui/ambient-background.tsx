@@ -113,7 +113,11 @@ const styles = StyleSheet.create({
     height: 1,
   },
   grid: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
     opacity: 0.16,
   },
   gridLine: {
