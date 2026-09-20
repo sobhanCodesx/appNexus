@@ -33,10 +33,13 @@ export function PressableScale({
       {...props}
       style={[style, animatedStyle]}
       onPressIn={(event) => {
+        // Reanimated SharedValue mutation is intentionally handled by the UI runtime.
+        // eslint-disable-next-line react-hooks/immutability
         scale.value = withTiming(pressedScale, { duration: motion.quick });
         onPressIn?.(event);
       }}
       onPressOut={(event) => {
+        // eslint-disable-next-line react-hooks/immutability
         scale.value = withSpring(1, motion.spring);
         onPressOut?.(event);
       }}
