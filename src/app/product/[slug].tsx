@@ -217,6 +217,16 @@ export default function ProductScreen() {
         </ScrollView>
 
         <View style={styles.buyDock}>
+          {product.trade_enabled ? (
+            <PressableScale
+              onPress={() => router.push({
+                pathname: '/ticket/new',
+                params: { type: 'exchange', product_id: String(product.id) },
+              })}
+              style={styles.tradeButton}>
+              <Text style={styles.tradeButtonText}>معاوضه</Text>
+            </PressableScale>
+          ) : null}
           <PressableScale onPress={() => void add()} style={[styles.buy, added && styles.buyAdded]}>
             <Text style={[styles.buyText, added && styles.buyTextAdded]}>{added ? 'اضافه شد ✓' : 'افزودن به سبد'}</Text>
           </PressableScale>
@@ -294,6 +304,22 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(5,7,11,0.97)',
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
     ...shadow.card,
+  },
+  tradeButton: {
+    minWidth: 84,
+    minHeight: 54,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(85,246,255,0.30)',
+    backgroundColor: 'rgba(85,246,255,0.07)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+  },
+  tradeButtonText: {
+    color: palette.cyan,
+    fontSize: typeScale.bodySm,
+    fontWeight: fontWeight.black,
   },
   buy: {
     flex: 1, minHeight: 54, borderRadius: radii.lg,
