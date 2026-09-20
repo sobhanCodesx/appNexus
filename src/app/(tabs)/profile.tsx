@@ -9,6 +9,7 @@ import { Screen } from '@/components/ui/screen';
 import { fontWeight, layout, palette, radii, spacing, typeScale } from '@/design';
 import { apiRequest, getAccessToken, setAccessToken } from '@/services/api';
 import { invalidateResource } from '@/services/resource-cache';
+import { registerNativePushDevice } from '@/services/push';
 import type { ProfilePayload } from '@/types/api';
 
 export default function ProfileScreen() {
@@ -72,6 +73,11 @@ export default function ProfileScreen() {
         <MenuRow title="آدرس‌ها" caption="مدیریت آدرس‌های تحویل" onPress={() => router.push('/addresses')} />
         <MenuRow title="فروشگاه" caption="محصولات، تخفیف‌ها و معاوضه" onPress={() => router.push('/store')} />
         <MenuRow title="اعلان‌ها" caption="چیزهایی که واقعاً مهم‌اند" onPress={() => router.push('/notifications')} />
+        <MenuRow
+          title="فعال‌سازی Push"
+          caption="اعلان native برای بازی‌ها و سفارش‌ها"
+          onPress={() => void registerNativePushDevice()}
+        />
         <MenuRow
           title="خروج"
           caption="خروج امن از این دستگاه"
