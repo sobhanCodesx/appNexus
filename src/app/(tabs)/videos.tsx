@@ -2,17 +2,20 @@ import { FlashList } from '@shopify/flash-list';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { PageHeader } from '@/components/ui/page-header';
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { Screen } from '@/components/ui/screen';
 import { SkeletonBox } from '@/components/ui/skeleton';
+import { VideoPreviewSurface, videoPreviewUrl } from '@/components/video/video-preview-surface';
 import { fontFamily, fontWeight, layout, palette, radii, shadow, spacing, typeScale } from '@/design';
 import { usePaginatedResource } from '@/hooks/use-paginated-resource';
 import type { ContentCard as ContentItem } from '@/types/api';
 
 const fallback = require('../../../assets/images/logo-glow.png');
+const previewViewabilityConfig = { itemVisiblePercentThreshold: 68, minimumViewTime: 650 };
 
 function thumbnailOf(item: ContentItem) {
   return item.thumbnail_url || item.image_url || item.cover_url || item.game?.cover_url;
@@ -31,6 +34,7 @@ function durationLabel(seconds?: number | null) {
 }
 
 export default function VideosScreen() {
+  const [activePreviewId, setActivePreviewId] = useState<number | null>(null);
   const {
     items: videos,
     loading,
@@ -43,6 +47,16 @@ export default function VideosScreen() {
   const featured = videos[0];
   const rest = videos.slice(1);
 
+  const onViewableItemsChanged = useCallback(({
+    viewableItems,
+  }: {
+    viewableItems: { item: ContentItem; isViewable?: boolean }[];
+  }) => {
+    const candidate = viewableItems
+      .find((token) => token.isViewable && Boolean(videoPreviewUrl(token.item)));
+    setActivePreviewId(candidate?.item.id ?? null);
+  }, []);
+
   return (
     <Screen>
       <PageHeader
@@ -54,7 +68,11 @@ export default function VideosScreen() {
       <FlashList
         data={rest}
         keyExtractor={(item) => String(item.id)}
-        renderItem={({ item }) => <VideoRow item={item} />}
+        renderItem={({ item }) => (
+          <VideoRow item={item} previewActive={activePreviewId === item.id} />
+        )}
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={previewViewabilityConfig}
         ListHeaderComponent={
           <>
             <View style={styles.intro}>
@@ -199,7 +217,7 @@ function FeaturedVideo({ item }: { item: ContentItem }) {
   );
 }
 
-function VideoRow({ item }: { item: ContentItem }) {
+function VideoRow({ item, previewActive }: { item: ContentItem; previewActive: boolean }) {
   const thumbnail = thumbnailOf(item);
   const logo = logoOf(item);
   const duration = durationLabel(item.duration);
@@ -211,8 +229,9 @@ function VideoRow({ item }: { item: ContentItem }) {
       style={styles.videoRow}>
       <View style={styles.thumb}>
         <Image source={thumbnail ? { uri: String(thumbnail) } : fallback} style={StyleSheet.absoluteFill} contentFit="cover" />
+        <VideoPreviewSurface item={item} active={previewActive} />
         <LinearGradient colors={['rgba(3,5,9,0.00)', 'rgba(3,5,9,0.36)']} style={StyleSheet.absoluteFill} />
-        <View style={styles.thumbPlay}><Text style={styles.thumbPlayText}>▶</Text></View>
+        {!previewActive ? <View style={styles.thumbPlay}><Text style={styles.thumbPlayText}>▶</Text></View> : null}
         {duration ? <View style={styles.thumbDuration}><Text style={styles.thumbDurationText}>{duration}</Text></View> : null}
       </View>
 
