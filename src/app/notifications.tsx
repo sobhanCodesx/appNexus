@@ -7,6 +7,7 @@ import { Screen } from '@/components/ui/screen';
 import { fontWeight, layout, palette, radii, spacing, typeScale } from '@/design';
 import { useApiResource } from '@/hooks/use-api-resource';
 import { apiRequest } from '@/services/api';
+import { nativeHrefFromUrl } from '@/services/native-navigation';
 import { invalidateResource } from '@/services/resource-cache';
 import type { Paginated } from '@/types/api';
 
@@ -31,11 +32,20 @@ export default function NotificationsScreen() {
   };
 
   const mark = async (item: NotificationItem) => {
+    let target = item.url || null;
+
     if (!item.read_at) {
-      await apiRequest('/notifications/' + item.id, { method: 'PATCH' });
+      const result = await apiRequest<{ read: boolean; id: string; url?: string | null }>(
+        '/notifications/' + item.id,
+        { method: 'PATCH' },
+      );
+      target = result.url ?? target;
       invalidateResource('/notifications');
       await refresh();
     }
+
+    const href = nativeHrefFromUrl(target);
+    if (href) router.push(href);
   };
 
   return (
