@@ -234,6 +234,19 @@ function NativeVideo({
   useEffect(() => clearControlsTimer, [clearControlsTimer]);
 
   useEffect(() => {
+    if (!isPlaying) {
+      clearControlsTimer();
+      setControlsVisible(true);
+      return;
+    }
+
+    clearControlsTimer();
+    controlsTimer.current = setTimeout(() => {
+      setControlsVisible(false);
+    }, 1100);
+  }, [clearControlsTimer, isPlaying]);
+
+  useEffect(() => {
     if (!isPlaying) return;
 
     neonRotation.setValue(0);
