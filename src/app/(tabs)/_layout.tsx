@@ -29,8 +29,10 @@ export default function TabsLayout() {
       }}
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: palette.white,
+        tabBarActiveTintColor: palette.cyan,
         tabBarInactiveTintColor: palette.textDim,
+        tabBarActiveBackgroundColor: 'rgba(88,244,255,0.065)',
+        tabBarInactiveBackgroundColor: 'transparent',
         tabBarHideOnKeyboard: true,
         sceneStyle: { backgroundColor: palette.ink },
         tabBarLabelStyle: {
@@ -38,27 +40,34 @@ export default function TabsLayout() {
           fontFamily: fontFamily.bold,
           fontWeight: fontWeight.bold,
           marginTop: 1,
+          letterSpacing: -0.1,
+        },
+        tabBarIconStyle: {
+          marginTop: 2,
         },
         tabBarItemStyle: {
           borderRadius: radii.lg,
-          marginVertical: 3,
+          marginVertical: 5,
+          marginHorizontal: 2,
+          overflow: 'hidden',
         },
         tabBarStyle: {
           position: 'absolute',
-          left: 12,
-          right: 12,
+          left: 10,
+          right: 10,
           bottom: dockBottom,
           height: dockHeight,
           borderTopWidth: 0,
           borderWidth: 1,
-          borderColor: 'rgba(255,255,255,0.12)',
-          borderRadius: 24,
+          borderColor: 'rgba(255,255,255,0.135)',
+          borderRadius: 26,
           backgroundColor:
             Platform.OS === 'android'
               ? 'rgba(7,11,18,0.96)'
               : 'transparent',
           paddingTop: 0,
           paddingBottom: 0,
+          paddingHorizontal: 4,
           overflow: 'hidden',
           ...shadow.soft,
         },
@@ -136,9 +145,9 @@ const styles = StyleSheet.create({
   topHairline: {
     position: 'absolute',
     top: 0,
-    left: 30,
-    right: 30,
+    left: 24,
+    right: 24,
     height: 1,
-    backgroundColor: 'rgba(88,244,255,0.16)',
+    backgroundColor: 'rgba(88,244,255,0.22)',
   },
 });
