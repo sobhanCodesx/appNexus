@@ -54,8 +54,11 @@ export type ContentCard = {
   feed_type?: string | null;
   badge?: string | null;
   likes_count?: number;
+  dislikes_count?: number;
   comments_count?: number;
+  user_reaction?: 'like' | 'dislike' | null;
   is_liked?: boolean;
+  is_saved?: boolean;
   allow_comments?: boolean;
   published_at?: string | null;
   channel?: ContentChannel | null;
