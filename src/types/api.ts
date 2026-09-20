@@ -96,6 +96,35 @@ export type StudioCard = {
   channels_count?: number;
 };
 
+export type NexusLatestItem = {
+  key: string;
+  kind: 'feed' | 'video' | 'studio' | 'game' | 'product';
+  id: number;
+  title: string;
+  subtitle?: string | null;
+  slug: string;
+  image_url?: ImageUrl;
+  url?: string | null;
+  created_at?: string | null;
+};
+
+export type HomeGame = {
+  id: number;
+  name: string;
+  slug: string;
+  developer?: string | null;
+  publisher?: string | null;
+  cover_url?: ImageUrl;
+  background_url?: ImageUrl;
+  created_at?: string | null;
+  studio?: {
+    id: number;
+    name: string;
+    slug: string;
+    logo_url?: ImageUrl;
+  } | null;
+};
+
 export type HomeProduct = {
   id: number;
   title: string;
@@ -169,6 +198,9 @@ export type HomePayload = {
   featured_products?: HomeProduct[];
   latest_products?: HomeProduct[];
   latest_feed?: ContentCard[];
+  latest_videos?: ContentCard[];
+  latest_games?: HomeGame[];
+  nexus_latest?: NexusLatestItem[];
   game_radar?: GameRadarItem[];
   latest_studios?: StudioCard[];
   content_sections?: HomeContentSection[];
