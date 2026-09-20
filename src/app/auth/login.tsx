@@ -12,7 +12,7 @@ import {
 } from '@/components/auth/auth-scaffold';
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { fontFamily, fontWeight, palette, spacing, typeScale } from '@/design';
-import { apiRequest, setAccessToken } from '@/services/api';
+import { ApiError, apiRequest, setAccessToken } from '@/services/api';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -67,6 +67,31 @@ export default function LoginScreen() {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.replace('/(tabs)/profile');
     } catch (value) {
+      if (value instanceof ApiError && value.status === 409) {
+        const payload = value.payload as {
+          code?: string;
+          verification_required?: boolean;
+          channel?: 'email' | 'mobile';
+          identifier?: string;
+        } | null;
+
+        if (
+          payload?.verification_required
+          && payload.code === 'verification_required'
+          && payload.channel
+          && payload.identifier
+        ) {
+          router.replace({
+            pathname: '/auth/verify',
+            params: {
+              channel: payload.channel,
+              identifier: payload.identifier,
+            },
+          });
+          return;
+        }
+      }
+
       setError(value instanceof Error ? value.message : 'ورود انجام نشد.');
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
