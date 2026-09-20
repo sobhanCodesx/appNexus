@@ -1,15 +1,18 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { fontFamily, fontWeight, palette, spacing, typeScale } from '@/design';
+import { PressableScale } from './pressable-scale';
 
 export function SectionHeader({
   title,
   eyebrow,
   action,
+  onAction,
 }: {
   title: string;
   eyebrow?: string;
   action?: string;
+  onAction?: () => void;
 }) {
   return (
     <View style={styles.row}>
@@ -24,10 +27,20 @@ export function SectionHeader({
       </View>
 
       {action ? (
-        <View style={styles.actionWrap}>
-          <Text style={styles.action}>{action}</Text>
-          <View style={styles.actionArrow} />
-        </View>
+        onAction ? (
+          <PressableScale
+            haptic={false}
+            onPress={onAction}
+            style={styles.actionWrap}>
+            <Text style={styles.action}>{action}</Text>
+            <View style={styles.actionArrow} />
+          </PressableScale>
+        ) : (
+          <View style={styles.actionWrap}>
+            <Text style={styles.action}>{action}</Text>
+            <View style={styles.actionArrow} />
+          </View>
+        )
       ) : null}
     </View>
   );
