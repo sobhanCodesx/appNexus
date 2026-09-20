@@ -93,11 +93,84 @@ export type StudioCard = {
   channels_count?: number;
 };
 
+export type HomeProduct = {
+  id: number;
+  title: string;
+  slug: string;
+  category?: string | null;
+  badge?: string | null;
+  availability?: string | null;
+  stock?: number | null;
+  trade_enabled?: boolean;
+  cover_url?: ImageUrl;
+  pricing?: {
+    regular_price?: number;
+    sale_price?: number;
+    final_price?: number;
+    discount_amount?: number;
+    is_partner_price?: boolean;
+  };
+};
+
+export type HomeCategory = {
+  id: number;
+  name: string;
+  slug: string;
+  image_url?: ImageUrl;
+  products_count?: number;
+};
+
+export type HomeChannel = {
+  id: number;
+  name: string;
+  slug: string;
+  image_url?: ImageUrl;
+  videos_count?: number;
+  subscribers_count?: number;
+};
+
+export type HomeMixedItem = {
+  key: string;
+  type: 'product' | 'video';
+  id: number;
+  title: string;
+  slug: string;
+  image_url?: ImageUrl;
+  eyebrow?: string | null;
+  published_at?: string | null;
+  duration?: number | null;
+  views?: number;
+  pricing?: HomeProduct['pricing'];
+};
+
+export type HomeContentSection = {
+  id: number;
+  title: string;
+  subtitle?: string | null;
+  content_type: 'products' | 'categories' | 'games' | 'brands' | 'platforms' | 'posts' | 'videos' | 'shorts' | string;
+  layout?: string | null;
+  items: Array<HomeProduct | ContentCard | {
+    id: number;
+    title: string;
+    slug?: string | null;
+    eyebrow?: string | null;
+    excerpt?: string | null;
+    image_url?: ImageUrl;
+  }>;
+};
+
 export type HomePayload = {
+  settings?: Record<string, unknown>;
   slides?: HomeSlide[];
+  categories?: HomeCategory[];
+  featured_products?: HomeProduct[];
+  latest_products?: HomeProduct[];
   latest_feed?: ContentCard[];
   game_radar?: GameRadarItem[];
   latest_studios?: StudioCard[];
+  content_sections?: HomeContentSection[];
+  fresh_content?: HomeMixedItem[];
+  channels?: HomeChannel[];
   personalized_home?: {
     feed?: ContentCard[];
     videos?: ContentCard[];
