@@ -28,21 +28,26 @@ jobs:
           node-version: 22
           cache: npm
       - name: Generate lockfile
-        run: |
-          npm install
-          cp package-lock.json /tmp/package-lock.json
-      - name: Rebase lockfile onto latest branch
-        run: |
-          git fetch origin native-premium-v1
-          git reset --hard origin/native-premium-v1
-          cp /tmp/package-lock.json package-lock.json
+        run: npm install
       - name: Commit lockfile
         run: |
           if git diff --quiet package-lock.json; then
             exit 0
           fi
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add package-lock.json
           git commit -m "chore(native): sync dependency lockfile"
-          git push origin HEAD:native-premium-v1
+
+          for attempt in 1 2 3 4 5; do
+            git fetch origin native-premium-v1
+            git rebase origin/native-premium-v1
+            if git push origin HEAD:native-premium-v1; then
+              exit 0
+            fi
+            sleep 2
+          done
+
+          echo "Could not publish lockfile after retries."
+          exit 1
