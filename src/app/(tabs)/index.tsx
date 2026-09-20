@@ -27,6 +27,7 @@ import {
 } from '@/design';
 import { useApiResource } from '@/hooks/use-api-resource';
 import { nativeHrefFromUrl } from '@/services/native-navigation';
+import { normalizeContentCards } from '@/utils/content-card';
 import type {
   ContentCard as ContentItem,
   HomeContentSection,
@@ -87,9 +88,11 @@ export default function HomeScreen() {
     ...dynamicSections.map((section) => `dynamic:${section.id}` as Section),
     'studios',
   ];
-  const feed = data.personalized_home?.feed?.length
-    ? data.personalized_home.feed
-    : data.latest_feed || [];
+  const feed = normalizeContentCards(
+    data.personalized_home?.feed?.length
+      ? data.personalized_home.feed
+      : data.latest_feed || [],
+  );
   const radar = data.personalized_home?.radar?.length
     ? data.personalized_home.radar
     : data.game_radar || [];
