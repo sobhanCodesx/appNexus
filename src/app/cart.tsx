@@ -51,7 +51,7 @@ function money(value: number) {
 }
 
 export default function CartScreen() {
-  const [local, setLocal] = useState<LocalCartLine[]>([]);
+  const [, setLocal] = useState<LocalCartLine[]>([]);
   const [resolved, setResolved] = useState<CartResponse>(emptyResponse);
   const [loading, setLoading] = useState(true);
 
