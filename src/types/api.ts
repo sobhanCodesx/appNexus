@@ -14,6 +14,8 @@ export type HomeSlide = {
   title?: string | null;
   eyebrow?: string | null;
   description?: string | null;
+  link_type?: string | null;
+  button_url?: string | null;
   mobile_image_url?: ImageUrl;
   desktop_image_url?: ImageUrl;
 };
