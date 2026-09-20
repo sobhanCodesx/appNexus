@@ -3,6 +3,7 @@ name: Native App Check
 on:
   push:
     branches:
+      - main
       - native-premium-v1
   pull_request:
     paths:
