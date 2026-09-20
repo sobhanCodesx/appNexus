@@ -18,26 +18,31 @@ import {
   spacing,
   typeScale,
 } from '@/design';
-import { useApiResource } from '@/hooks/use-api-resource';
-import type { DiscoverItem, Paginated } from '@/types/api';
+import { usePaginatedResource } from '@/hooks/use-paginated-resource';
+import type { DiscoverItem } from '@/types/api';
 
 const fallbackImage = require('../../../assets/images/logo-glow.png');
 
 type Filter = 'all' | 'content' | 'store';
 
 export default function ExploreScreen() {
-  const { data, refreshing, refresh } = useApiResource<Paginated<DiscoverItem>>(
-    '/discover',
-    { data: [] },
+  const {
+    items: sourceItems,
+    refreshing,
+    refresh,
+    loadMore,
+    loadingMore,
+  } = usePaginatedResource<DiscoverItem>(
+    '/discover?per_page=20',
+    15_000,
   );
   const [filter, setFilter] = useState<Filter>('all');
 
   const items = useMemo(() => {
-    const source = data.data || [];
-    if (filter === 'content') return source.filter((item) => item.kind === 'content');
-    if (filter === 'store') return source.filter((item) => item.kind === 'product_media');
-    return source;
-  }, [data.data, filter]);
+    if (filter === 'content') return sourceItems.filter((item) => item.kind === 'content');
+    if (filter === 'store') return sourceItems.filter((item) => item.kind === 'product_media');
+    return sourceItems;
+  }, [filter, sourceItems]);
 
   return (
     <Screen>
@@ -75,6 +80,13 @@ export default function ExploreScreen() {
         getItemType={(item) => item.kind}
         refreshing={refreshing}
         onRefresh={refresh}
+        onEndReached={() => void loadMore()}
+        onEndReachedThreshold={0.45}
+        ListFooterComponent={
+          loadingMore
+            ? <View style={styles.loadingMore}><Text style={styles.loadingMoreText}>در حال کشف سیگنال‌های بیشتر…</Text></View>
+            : null
+        }
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
         ListEmptyComponent={<Empty />}
@@ -289,6 +301,15 @@ const styles = StyleSheet.create({
     borderLeftWidth: 1.3,
     borderBottomWidth: 1.3,
     transform: [{ rotate: '45deg' }],
+  },
+  loadingMore: {
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
+  },
+  loadingMoreText: {
+    color: palette.textDim,
+    fontSize: 10,
+    fontWeight: fontWeight.bold,
   },
   empty: {
     paddingTop: 90,
