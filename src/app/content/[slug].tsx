@@ -1,12 +1,12 @@
-import { useEventListener } from 'expo';
+import { useEvent, useEventListener } from 'expo';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
-import { VideoView, useVideoPlayer } from 'expo-video';
-import { useEffect, useMemo, useState } from 'react';
-import { ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { VideoView, useVideoPlayer, type VideoThumbnail } from 'expo-video';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, Easing, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 
 import { ContentCard } from '@/components/cards/content-card';
 import { CommentsSection } from '@/components/community/comments-section';
@@ -78,6 +78,7 @@ export default function ContentDetailScreen() {
           {isVideo ? (
             <NativeVideo
               id={content.id}
+              title={content.title}
               source={String(content.video_url)}
               thumbnail={poster ? String(poster) : null}
               duration={content.duration || undefined}
@@ -152,109 +153,534 @@ export default function ContentDetailScreen() {
   );
 }
 
+function formatPlayerTime(value: number) {
+  const safe = Math.max(0, Number.isFinite(value) ? Math.floor(value) : 0);
+  const hours = Math.floor(safe / 3600);
+  const minutes = Math.floor((safe % 3600) / 60);
+  const seconds = safe % 60;
+
+  if (hours > 0) {
+    return [hours, minutes, seconds]
+      .map((part, index) => index === 0 ? String(part) : String(part).padStart(2, '0'))
+      .join(':');
+  }
+
+  return String(minutes) + ':' + String(seconds).padStart(2, '0');
+}
+
 function NativeVideo({
   id,
+  title,
   source,
   thumbnail,
   duration,
   initialPosition = 0,
 }: {
   id: number;
+  title: string;
   source: string;
   thumbnail?: string | null;
   duration?: number;
   initialPosition?: number;
 }) {
+  const videoRef = useRef<VideoView>(null);
+  const controlsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastProgressReport = useRef(0);
+  const neonRotation = useRef(new Animated.Value(0)).current;
+  const neonOpacity = useRef(new Animated.Value(0)).current;
+  const ambientMotion = useRef(new Animated.Value(0)).current;
+  const ambientOpacity = useRef(new Animated.Value(0.72)).current;
+
   const [posterVisible, setPosterVisible] = useState(true);
-  const player = useVideoPlayer({ uri: source }, (instance) => {
-    instance.timeUpdateEventInterval = 15;
-    if (initialPosition > 0) {
-      instance.currentTime = initialPosition;
-    }
+  const [controlsVisible, setControlsVisible] = useState(true);
+  const [currentTime, setCurrentTime] = useState(initialPosition);
+  const [progressWidth, setProgressWidth] = useState(1);
+  const [ambientFrame, setAmbientFrame] = useState<VideoThumbnail | null>(null);
+  const [muted, setMuted] = useState(false);
+  const [rate, setRate] = useState(1);
+
+  const player = useVideoPlayer({ uri: source, useCaching: true }, (instance) => {
+    instance.timeUpdateEventInterval = 0.25;
+    instance.preservesPitch = true;
+    if (initialPosition > 0) instance.currentTime = initialPosition;
   });
 
-  useEventListener(player, 'timeUpdate', ({ currentTime }) => {
+  const { isPlaying } = useEvent(player, 'playingChange', {
+    isPlaying: player.playing,
+  });
+
+  const totalDuration = Math.max(1, player.duration || duration || 1);
+  const progress = Math.max(0, Math.min(1, currentTime / totalDuration));
+
+  const clearControlsTimer = useCallback(() => {
+    if (controlsTimer.current) {
+      clearTimeout(controlsTimer.current);
+      controlsTimer.current = null;
+    }
+  }, []);
+
+  const revealControls = useCallback((autohide = true) => {
+    clearControlsTimer();
+    setControlsVisible(true);
+
+    if (autohide && player.playing) {
+      controlsTimer.current = setTimeout(() => {
+        setControlsVisible(false);
+      }, 3600);
+    }
+  }, [clearControlsTimer, player]);
+
+  useEffect(() => clearControlsTimer, [clearControlsTimer]);
+
+  useEffect(() => {
+    if (!isPlaying) return;
+
+    neonRotation.setValue(0);
+    neonOpacity.setValue(1);
+
+    const spin = Animated.loop(
+      Animated.timing(neonRotation, {
+        toValue: 1,
+        duration: 2200,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }),
+    );
+
+    spin.start();
+
+    const stopTimer = setTimeout(() => {
+      Animated.timing(neonOpacity, {
+        toValue: 0.14,
+        duration: 950,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start(() => spin.stop());
+    }, 15_000);
+
+    return () => {
+      clearTimeout(stopTimer);
+      spin.stop();
+    };
+  }, [isPlaying, neonOpacity, neonRotation]);
+
+  useEffect(() => {
+    if (!isPlaying) return;
+
+    ambientMotion.setValue(0);
+    const drift = Animated.loop(
+      Animated.sequence([
+        Animated.timing(ambientMotion, {
+          toValue: 1,
+          duration: 6200,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(ambientMotion, {
+          toValue: 0,
+          duration: 6200,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+
+    drift.start();
+    return () => drift.stop();
+  }, [ambientMotion, isPlaying]);
+
+  useEffect(() => {
+    if (!isPlaying) return;
+
+    let active = true;
+    let sampling = false;
+
+    const sample = async () => {
+      if (!active || sampling || player.currentTime <= 0) return;
+      sampling = true;
+
+      try {
+        const [frame] = await player.generateThumbnailsAsync(
+          [Math.max(0, player.currentTime)],
+          { maxWidth: 144, maxHeight: 82 },
+        );
+
+        if (!active || !frame) return;
+
+        Animated.timing(ambientOpacity, {
+          toValue: 0.16,
+          duration: 220,
+          useNativeDriver: true,
+        }).start(() => {
+          if (!active) return;
+          setAmbientFrame(frame);
+          Animated.timing(ambientOpacity, {
+            toValue: 0.78,
+            duration: 720,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+          }).start();
+        });
+      } catch {
+        // Some remote streams do not support thumbnail extraction.
+      } finally {
+        sampling = false;
+      }
+    };
+
+    const first = setTimeout(() => void sample(), 900);
+    const interval = setInterval(() => void sample(), 4200);
+
+    return () => {
+      active = false;
+      clearTimeout(first);
+      clearInterval(interval);
+    };
+  }, [ambientOpacity, isPlaying, player]);
+
+  useEventListener(player, 'timeUpdate', ({ currentTime: nextTime }) => {
+    setCurrentTime(nextTime);
+
+    if (nextTime - lastProgressReport.current < 15) return;
+    lastProgressReport.current = nextTime;
+
     void apiRequest(
       '/watch-progress/' + id,
       {
         method: 'PUT',
         body: JSON.stringify({
-          position_seconds: Math.max(0, Math.floor(currentTime)),
+          position_seconds: Math.max(0, Math.floor(nextTime)),
           duration_seconds: Math.max(1, Math.floor(player.duration || duration || 1)),
         }),
       },
     ).catch(() => undefined);
   });
 
-  const play = () => {
+  const togglePlayback = () => {
     setPosterVisible(false);
-    player.play();
+    revealControls(true);
+
+    if (player.playing) {
+      player.pause();
+    } else {
+      player.play();
+    }
+
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
+  const seekBy = (seconds: number) => {
+    const next = Math.max(0, Math.min(totalDuration, player.currentTime + seconds));
+    player.currentTime = next;
+    setCurrentTime(next);
+    revealControls(true);
+    void Haptics.selectionAsync();
+  };
+
+  const seekTo = (ratio: number) => {
+    const next = Math.max(0, Math.min(totalDuration, totalDuration * ratio));
+    player.currentTime = next;
+    setCurrentTime(next);
+    revealControls(true);
+  };
+
+  const toggleMute = () => {
+    const next = !player.muted;
+    player.muted = next;
+    setMuted(next);
+    revealControls(true);
+  };
+
+  const cycleRate = () => {
+    const rates = [1, 1.25, 1.5, 2];
+    const index = rates.findIndex((item) => item === rate);
+    const next = rates[(index + 1) % rates.length];
+    player.playbackRate = next;
+    setRate(next);
+    revealControls(true);
+    void Haptics.selectionAsync();
+  };
+
+  const ambientSource = ambientFrame || (thumbnail ? { uri: thumbnail } : fallback);
+  const neonRotate = neonRotation.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
   return (
     <View style={styles.playerWorld}>
-      {thumbnail ? (
-        <View pointerEvents="none" style={styles.ambient}>
-          <Image source={{ uri: thumbnail }} style={StyleSheet.absoluteFill} contentFit="cover" blurRadius={32} />
-          <BlurView intensity={68} tint="dark" style={StyleSheet.absoluteFill} />
-          <LinearGradient
-            colors={['rgba(3,5,9,0.02)', 'rgba(3,5,9,0.48)', palette.ink]}
-            locations={[0, 0.58, 1]}
+      <View pointerEvents="none" style={styles.ambientStage}>
+        <Animated.View
+          style={[
+            styles.ambientFrame,
+            {
+              opacity: ambientOpacity,
+              transform: [
+                {
+                  scale: ambientMotion.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [1.12, 1.28],
+                  }),
+                },
+                {
+                  translateX: ambientMotion.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [-10, 12],
+                  }),
+                },
+                {
+                  translateY: ambientMotion.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [5, -9],
+                  }),
+                },
+              ],
+            },
+          ]}>
+          <Image
+            source={ambientSource}
             style={StyleSheet.absoluteFill}
+            contentFit="cover"
+            blurRadius={42}
+            transition={620}
           />
-          <View style={styles.ambientHaloLeft} />
-          <View style={styles.ambientHaloRight} />
-        </View>
-      ) : null}
+        </Animated.View>
+        <LinearGradient
+          colors={[
+            'rgba(2,4,8,0.14)',
+            'rgba(3,5,9,0.30)',
+            'rgba(3,5,9,0.68)',
+            palette.ink,
+          ]}
+          locations={[0, 0.38, 0.72, 1]}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={styles.ambientBloomLeft} />
+        <View style={styles.ambientBloomRight} />
+      </View>
 
       <View style={styles.playerBrandRow}>
         <View style={styles.playerBrandPill}>
           <View style={styles.playerBrandDot} />
-          <Text style={styles.playerBrandText}>PLAYNEXUS CINEMA</Text>
+          <Text style={styles.playerBrandText}>NEXUS CINEMA ENGINE</Text>
         </View>
-        <Text style={styles.playerHint}>AMBIENT · PIP · FULLSCREEN</Text>
+        <View style={styles.playerLiveRow}>
+          <View style={styles.playerLiveDot} />
+          <Text style={styles.playerHint}>LIVE AMBIENT</Text>
+        </View>
       </View>
 
-      <View style={styles.videoFrame}>
-        <View pointerEvents="none" style={styles.frameGlow} />
-        <VideoView
-          player={player}
-          style={styles.video}
-          contentFit="contain"
-          nativeControls
-          fullscreenOptions={{ enable: true }}
-          allowsPictureInPicture
-        />
+      <View style={styles.neonShell}>
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.neonRotor,
+            {
+              opacity: neonOpacity,
+              transform: [{ rotate: neonRotate }],
+            },
+          ]}>
+          <LinearGradient
+            colors={[
+              palette.cyan,
+              palette.blueHot,
+              palette.violet,
+              palette.magenta,
+              palette.cyan,
+            ]}
+            locations={[0, 0.24, 0.5, 0.76, 1]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+        </Animated.View>
 
-        {posterVisible ? (
-          <PressableScale onPress={play} pressedScale={0.995} style={styles.poster}>
-            <Image source={thumbnail ? { uri: thumbnail } : fallback} style={StyleSheet.absoluteFill} contentFit="cover" />
-            <LinearGradient
-              colors={['rgba(3,5,9,0.02)', 'rgba(3,5,9,0.15)', 'rgba(3,5,9,0.58)']}
-              style={StyleSheet.absoluteFill}
-            />
-            <View style={styles.posterPlayOuter}>
-              <View style={styles.posterPlayInner}>
-                <Text style={styles.posterPlayGlyph}>▶</Text>
+        <View style={styles.videoFrame}>
+          <VideoView
+            ref={videoRef}
+            player={player}
+            style={styles.video}
+            contentFit="contain"
+            nativeControls={false}
+            fullscreenOptions={{ enable: true }}
+            allowsPictureInPicture
+            onFirstFrameRender={() => {
+              if (player.playing) setPosterVisible(false);
+            }}
+          />
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="نمایش یا مخفی کردن کنترل‌های ویدیو"
+            onPress={() => {
+              if (controlsVisible) {
+                setControlsVisible(false);
+                clearControlsTimer();
+              } else {
+                revealControls(true);
+              }
+            }}
+            style={StyleSheet.absoluteFill}
+          />
+
+          {!posterVisible && controlsVisible ? (
+            <View pointerEvents="box-none" style={styles.cinemaControls}>
+              <LinearGradient
+                pointerEvents="none"
+                colors={['rgba(2,4,8,0.66)', 'transparent', 'rgba(2,4,8,0.88)']}
+                locations={[0, 0.43, 1]}
+                style={StyleSheet.absoluteFill}
+              />
+
+              <View style={styles.cinemaTopRow}>
+                <View style={styles.nowPlayingPill}>
+                  <View style={styles.nowPlayingPulse} />
+                  <Text numberOfLines={1} style={styles.nowPlayingTitle}>{title}</Text>
+                </View>
+
+                <View style={styles.cinemaTopActions}>
+                  <MiniPlayerButton label={rate === 1 ? '1×' : String(rate) + '×'} onPress={cycleRate} />
+                  <MiniPlayerButton label={muted ? 'MUTE' : 'VOL'} onPress={toggleMute} />
+                  <MiniPlayerButton
+                    label="PIP"
+                    onPress={() => void videoRef.current?.startPictureInPicture().catch(() => undefined)}
+                  />
+                  <MiniPlayerButton
+                    label="⛶"
+                    onPress={() => void videoRef.current?.enterFullscreen().catch(() => undefined)}
+                  />
+                </View>
+              </View>
+
+              <View style={styles.cinemaCenterControls}>
+                <PlayerRoundButton label="−10" compact onPress={() => seekBy(-10)} />
+                <PlayerRoundButton
+                  label={isPlaying ? 'Ⅱ' : '▶'}
+                  primary
+                  onPress={togglePlayback}
+                />
+                <PlayerRoundButton label="+10" compact onPress={() => seekBy(10)} />
+              </View>
+
+              <View style={styles.cinemaBottom}>
+                <Pressable
+                  onLayout={(event) => setProgressWidth(Math.max(1, event.nativeEvent.layout.width))}
+                  onPress={(event) => {
+                    seekTo(Math.max(0, Math.min(1, event.nativeEvent.locationX / progressWidth)));
+                  }}
+                  style={styles.progressHitArea}>
+                  <View style={styles.progressTrack}>
+                    <View style={[styles.progressFill, { width: (progress * 100 + '%') as `${number}%` }]} />
+                    <View style={[styles.progressKnob, { left: Math.max(0, progress * progressWidth - 5) }]} />
+                  </View>
+                </Pressable>
+
+                <View style={styles.timeRow}>
+                  <Text style={styles.timeText}>{formatPlayerTime(currentTime)}</Text>
+                  <View style={styles.timeDivider} />
+                  <Text style={styles.timeDuration}>{formatPlayerTime(totalDuration)}</Text>
+                  <View style={styles.cinemaSignalLine} />
+                  <Text style={styles.cinemaSignalText}>PLAYNEXUS // CINEMA</Text>
+                </View>
               </View>
             </View>
-            <View style={styles.posterBottom}>
-              <View style={styles.posterSignal} />
-              <Text style={styles.posterText}>PLAY WITH NEXUS</Text>
-            </View>
-          </PressableScale>
-        ) : null}
+          ) : null}
+
+          {posterVisible ? (
+            <PressableScale onPress={togglePlayback} pressedScale={0.995} style={styles.poster}>
+              <Image
+                source={thumbnail ? { uri: thumbnail } : fallback}
+                style={StyleSheet.absoluteFill}
+                contentFit="cover"
+              />
+              <LinearGradient
+                colors={['rgba(3,5,9,0.02)', 'rgba(3,5,9,0.13)', 'rgba(3,5,9,0.72)']}
+                style={StyleSheet.absoluteFill}
+              />
+              <View style={styles.posterPlayAura}>
+                <View style={styles.posterPlayOrbit} />
+                <View style={styles.posterPlayOuter}>
+                  <View style={styles.posterPlayInner}>
+                    <Text style={styles.posterPlayGlyph}>▶</Text>
+                  </View>
+                </View>
+              </View>
+              <View style={styles.posterBottom}>
+                <View style={styles.posterSignal} />
+                <View>
+                  <Text style={styles.posterText}>ENTER NEXUS CINEMA</Text>
+                  <Text style={styles.posterSubtext}>AMBIENT FRAME ENGINE · 4K READY</Text>
+                </View>
+              </View>
+            </PressableScale>
+          ) : null}
+        </View>
       </View>
 
-      <View style={styles.paletteRail}>
-        <View style={[styles.paletteLine, { backgroundColor: palette.cyan }]} />
-        <View style={[styles.paletteLine, { backgroundColor: palette.blueHot }]} />
-        <View style={[styles.paletteLine, { backgroundColor: palette.violet }]} />
-        <View style={[styles.paletteLine, { backgroundColor: palette.magenta }]} />
+      <View style={styles.cinemaFooter}>
+        <View style={styles.paletteRail}>
+          <View style={[styles.paletteLine, { backgroundColor: palette.cyan }]} />
+          <View style={[styles.paletteLine, { backgroundColor: palette.blueHot }]} />
+          <View style={[styles.paletteLine, { backgroundColor: palette.violet }]} />
+          <View style={[styles.paletteLine, { backgroundColor: palette.magenta }]} />
+        </View>
+        <Text style={styles.paletteCaption}>
+          LIVE FRAME AMBIENT · رنگ صحنه هم‌زمان وارد فضای پلیر می‌شود
+        </Text>
       </View>
-      <Text style={styles.paletteCaption}>رنگ تصویر، فضای اطراف پلیر را زنده نگه می‌دارد</Text>
     </View>
+  );
+}
+
+function MiniPlayerButton({ label, onPress }: { label: string; onPress: () => void }) {
+  return (
+    <PressableScale
+      haptic={false}
+      onPress={onPress}
+      pressedScale={0.94}
+      style={styles.miniPlayerButton}>
+      <BlurView intensity={42} tint="dark" style={StyleSheet.absoluteFill} />
+      <Text style={styles.miniPlayerButtonText}>{label}</Text>
+    </PressableScale>
+  );
+}
+
+function PlayerRoundButton({
+  label,
+  primary = false,
+  compact = false,
+  onPress,
+}: {
+  label: string;
+  primary?: boolean;
+  compact?: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <PressableScale
+      onPress={onPress}
+      pressedScale={0.92}
+      style={[
+        styles.playerRoundButton,
+        compact && styles.playerRoundButtonCompact,
+        primary && styles.playerRoundButtonPrimary,
+      ]}>
+      {primary ? (
+        <LinearGradient
+          colors={['rgba(88,244,255,0.24)', 'rgba(77,163,255,0.13)', 'rgba(255,85,213,0.12)']}
+          style={StyleSheet.absoluteFill}
+        />
+      ) : (
+        <BlurView intensity={54} tint="dark" style={StyleSheet.absoluteFill} />
+      )}
+      <Text
+        style={[
+          styles.playerRoundButtonText,
+          compact && styles.playerRoundButtonTextCompact,
+        ]}>
+        {label}
+      </Text>
+    </PressableScale>
   );
 }
 
@@ -543,27 +969,396 @@ function DetailSkeleton() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   scrollContent: { paddingBottom: 28 },
-  playerWorld: { minHeight: 344, paddingTop: 104, paddingHorizontal: 10, paddingBottom: 18, backgroundColor: palette.black, overflow: 'hidden' },
-  ambient: { position: 'absolute', top: 34, left: -80, right: -80, height: 390, opacity: 0.92 },
-  ambientHaloLeft: { position: 'absolute', left: -20, top: 82, width: 170, height: 170, borderRadius: 170, backgroundColor: 'rgba(88,244,255,0.12)' },
-  ambientHaloRight: { position: 'absolute', right: -18, top: 112, width: 180, height: 180, borderRadius: 180, backgroundColor: 'rgba(255,85,213,0.10)' },
-  playerBrandRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 2, marginBottom: 10 },
-  playerBrandPill: { height: 27, paddingHorizontal: 9, borderRadius: radii.pill, backgroundColor: 'rgba(3,5,9,0.56)', borderWidth: 1, borderColor: 'rgba(88,244,255,0.14)', flexDirection: 'row', alignItems: 'center', gap: 6 },
-  playerBrandDot: { width: 5, height: 5, borderRadius: 5, backgroundColor: palette.cyan, ...shadow.cyanGlow },
-  playerBrandText: { color: palette.white, fontFamily: fontFamily.black, fontSize: 7, letterSpacing: 0.8 },
-  playerHint: { color: 'rgba(255,255,255,0.42)', fontFamily: fontFamily.black, fontSize: 7, letterSpacing: 0.8 },
-  videoFrame: { width: '100%', aspectRatio: 16 / 9, borderRadius: 26, overflow: 'hidden', backgroundColor: palette.black, borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)', ...shadow.card },
-  frameGlow: { position: 'absolute', zIndex: 2, top: 0, right: 28, left: 28, height: 1, backgroundColor: 'rgba(88,244,255,0.72)' },
-  video: { flex: 1 },
-  poster: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, alignItems: 'center', justifyContent: 'center' },
-  posterPlayOuter: { width: 78, height: 78, borderRadius: 30, backgroundColor: 'rgba(3,5,9,0.38)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.16)', alignItems: 'center', justifyContent: 'center' },
-  posterPlayInner: { width: 58, height: 58, borderRadius: 22, backgroundColor: 'rgba(3,5,9,0.72)', borderWidth: 1, borderColor: 'rgba(88,244,255,0.24)', alignItems: 'center', justifyContent: 'center', ...shadow.cyanGlow },
-  posterPlayGlyph: { color: palette.white, fontSize: 20, marginLeft: 3 },
-  posterBottom: { position: 'absolute', right: 14, bottom: 12, flexDirection: 'row-reverse', alignItems: 'center', gap: 7 },
-  posterSignal: { width: 26, height: 2, borderRadius: 2, backgroundColor: palette.cyan },
-  posterText: { color: palette.white, fontFamily: fontFamily.black, fontSize: 7, letterSpacing: 0.8 },
-  paletteRail: { height: 3, marginHorizontal: 28, marginTop: 10, flexDirection: 'row', borderRadius: 3, overflow: 'hidden', opacity: 0.88 },
-  paletteCaption: { color: 'rgba(255,255,255,0.26)', fontFamily: fontFamily.medium, fontSize: 7, textAlign: 'center', marginTop: 5 },
+  playerWorld: {
+    minHeight: 390,
+    paddingTop: 104,
+    paddingHorizontal: 10,
+    paddingBottom: 20,
+    backgroundColor: palette.black,
+    overflow: 'hidden',
+  },
+  ambientStage: {
+    position: 'absolute',
+    top: 24,
+    left: -54,
+    right: -54,
+    height: 410,
+    overflow: 'hidden',
+  },
+  ambientFrame: {
+    position: 'absolute',
+    top: 22,
+    left: -22,
+    right: -22,
+    height: 330,
+  },
+  ambientBloomLeft: {
+    position: 'absolute',
+    left: -46,
+    top: 84,
+    width: 200,
+    height: 200,
+    borderRadius: 200,
+    backgroundColor: 'rgba(88,244,255,0.075)',
+  },
+  ambientBloomRight: {
+    position: 'absolute',
+    right: -42,
+    top: 112,
+    width: 210,
+    height: 210,
+    borderRadius: 210,
+    backgroundColor: 'rgba(255,85,213,0.065)',
+  },
+  playerBrandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 2,
+    marginBottom: 10,
+  },
+  playerBrandPill: {
+    height: 27,
+    paddingHorizontal: 9,
+    borderRadius: radii.pill,
+    backgroundColor: 'rgba(3,5,9,0.58)',
+    borderWidth: 1,
+    borderColor: 'rgba(88,244,255,0.15)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  playerBrandDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 5,
+    backgroundColor: palette.cyan,
+    ...shadow.cyanGlow,
+  },
+  playerBrandText: {
+    color: palette.white,
+    fontFamily: fontFamily.black,
+    fontSize: 7,
+    letterSpacing: 0.85,
+  },
+  playerLiveRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 5,
+  },
+  playerLiveDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 5,
+    backgroundColor: palette.success,
+  },
+  playerHint: {
+    color: 'rgba(255,255,255,0.44)',
+    fontFamily: fontFamily.black,
+    fontSize: 7,
+    letterSpacing: 0.8,
+  },
+  neonShell: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    borderRadius: 28,
+    overflow: 'hidden',
+    backgroundColor: palette.black,
+    padding: 2,
+    ...shadow.card,
+  },
+  neonRotor: {
+    position: 'absolute',
+    width: '175%',
+    height: '310%',
+    left: '-37.5%',
+    top: '-105%',
+  },
+  videoFrame: {
+    flex: 1,
+    borderRadius: 26,
+    overflow: 'hidden',
+    backgroundColor: palette.black,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
+  },
+  video: {
+    flex: 1,
+    backgroundColor: palette.black,
+  },
+  cinemaControls: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 4,
+    justifyContent: 'space-between',
+    paddingHorizontal: 11,
+    paddingVertical: 10,
+  },
+  cinemaTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  nowPlayingPill: {
+    flex: 1,
+    maxWidth: '48%',
+    minHeight: 28,
+    borderRadius: radii.pill,
+    paddingHorizontal: 9,
+    backgroundColor: 'rgba(3,5,9,0.52)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.09)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  nowPlayingPulse: {
+    width: 5,
+    height: 5,
+    borderRadius: 5,
+    backgroundColor: palette.magenta,
+    ...shadow.cyanGlow,
+  },
+  nowPlayingTitle: {
+    flex: 1,
+    color: palette.white,
+    fontFamily: fontFamily.black,
+    fontSize: 8,
+    textAlign: 'left',
+  },
+  cinemaTopActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  miniPlayerButton: {
+    minWidth: 34,
+    height: 28,
+    paddingHorizontal: 7,
+    borderRadius: 10,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(3,5,9,0.42)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  miniPlayerButtonText: {
+    color: palette.white,
+    fontFamily: fontFamily.black,
+    fontSize: 7,
+    letterSpacing: 0.3,
+  },
+  cinemaCenterControls: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: '50%',
+    marginTop: -31,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 19,
+  },
+  playerRoundButton: {
+    width: 62,
+    height: 62,
+    borderRadius: 25,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: 'rgba(3,5,9,0.54)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadow.soft,
+  },
+  playerRoundButtonCompact: {
+    width: 46,
+    height: 46,
+    borderRadius: 18,
+  },
+  playerRoundButtonPrimary: {
+    width: 64,
+    height: 64,
+    borderColor: 'rgba(88,244,255,0.36)',
+    backgroundColor: 'rgba(3,5,9,0.70)',
+    ...shadow.cyanGlow,
+  },
+  playerRoundButtonText: {
+    color: palette.white,
+    fontFamily: fontFamily.black,
+    fontSize: 20,
+    lineHeight: 24,
+  },
+  playerRoundButtonTextCompact: {
+    color: palette.text,
+    fontSize: 9,
+  },
+  cinemaBottom: {
+    gap: 3,
+  },
+  progressHitArea: {
+    height: 24,
+    justifyContent: 'center',
+  },
+  progressTrack: {
+    height: 4,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    overflow: 'visible',
+  },
+  progressFill: {
+    height: 4,
+    borderRadius: 4,
+    backgroundColor: palette.cyan,
+    ...shadow.cyanGlow,
+  },
+  progressKnob: {
+    position: 'absolute',
+    top: -3,
+    width: 10,
+    height: 10,
+    borderRadius: 10,
+    backgroundColor: palette.white,
+    borderWidth: 2,
+    borderColor: palette.cyan,
+  },
+  timeRow: {
+    minHeight: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  timeText: {
+    color: palette.white,
+    fontFamily: fontFamily.black,
+    fontSize: 8,
+    fontVariant: ['tabular-nums'],
+  },
+  timeDivider: {
+    width: 3,
+    height: 3,
+    borderRadius: 3,
+    backgroundColor: palette.textDim,
+  },
+  timeDuration: {
+    color: palette.textMuted,
+    fontFamily: fontFamily.medium,
+    fontSize: 8,
+    fontVariant: ['tabular-nums'],
+  },
+  cinemaSignalLine: {
+    flex: 1,
+    height: 1,
+    marginLeft: 4,
+    backgroundColor: 'rgba(88,244,255,0.20)',
+  },
+  cinemaSignalText: {
+    color: 'rgba(255,255,255,0.38)',
+    fontFamily: fontFamily.black,
+    fontSize: 6,
+    letterSpacing: 0.6,
+  },
+  poster: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    zIndex: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  posterPlayAura: {
+    width: 106,
+    height: 106,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  posterPlayOrbit: {
+    position: 'absolute',
+    width: 102,
+    height: 102,
+    borderRadius: 38,
+    borderWidth: 1,
+    borderColor: 'rgba(88,244,255,0.15)',
+    transform: [{ rotate: '45deg' }],
+  },
+  posterPlayOuter: {
+    width: 80,
+    height: 80,
+    borderRadius: 31,
+    backgroundColor: 'rgba(3,5,9,0.38)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.17)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  posterPlayInner: {
+    width: 59,
+    height: 59,
+    borderRadius: 22,
+    backgroundColor: 'rgba(3,5,9,0.72)',
+    borderWidth: 1,
+    borderColor: 'rgba(88,244,255,0.32)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadow.cyanGlow,
+  },
+  posterPlayGlyph: {
+    color: palette.white,
+    fontSize: 20,
+    marginLeft: 3,
+  },
+  posterBottom: {
+    position: 'absolute',
+    right: 14,
+    bottom: 12,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 8,
+  },
+  posterSignal: {
+    width: 30,
+    height: 2,
+    borderRadius: 2,
+    backgroundColor: palette.cyan,
+  },
+  posterText: {
+    color: palette.white,
+    fontFamily: fontFamily.black,
+    fontSize: 7,
+    letterSpacing: 0.9,
+    textAlign: 'right',
+  },
+  posterSubtext: {
+    color: 'rgba(255,255,255,0.40)',
+    fontFamily: fontFamily.medium,
+    fontSize: 6,
+    letterSpacing: 0.45,
+    marginTop: 2,
+    textAlign: 'right',
+  },
+  cinemaFooter: {
+    paddingHorizontal: 20,
+    alignItems: 'center',
+  },
+  paletteRail: {
+    height: 3,
+    width: '82%',
+    marginTop: 10,
+    flexDirection: 'row',
+    borderRadius: 3,
+    overflow: 'hidden',
+    opacity: 0.9,
+  },
+  paletteCaption: {
+    color: 'rgba(255,255,255,0.28)',
+    fontFamily: fontFamily.medium,
+    fontSize: 7,
+    textAlign: 'center',
+    marginTop: 5,
+  },
   paletteLine: { flex: 1 },
   imageFrame: { width: '100%', height: 454, backgroundColor: palette.surface },
   topControls: { position: 'absolute', zIndex: 10, top: 54, left: layout.screenPadding, right: layout.screenPadding, flexDirection: 'row', justifyContent: 'space-between' },
