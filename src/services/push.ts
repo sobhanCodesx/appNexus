@@ -4,10 +4,16 @@ import { Platform } from 'react-native';
 
 import { apiRequest } from '@/services/api';
 import { getInstallationId } from '@/services/installation';
-import { getPushRegistration } from '@/services/notifications';
+import {
+  type DevicePushTokenLike,
+  getPushRegistration,
+} from '@/services/notifications';
+import { isExpoGo } from '@/services/runtime';
 
-export async function registerNativePushDevice() {
-  const registration = await getPushRegistration();
+export async function registerNativePushDevice(
+  devicePushToken?: DevicePushTokenLike,
+) {
+  const registration = await getPushRegistration(devicePushToken);
   if (!registration) return false;
 
   await apiRequest('/devices', {
@@ -23,4 +29,14 @@ export async function registerNativePushDevice() {
   });
 
   return true;
+}
+
+export async function subscribeToNativePushTokenChanges() {
+  if (isExpoGo()) return null;
+
+  const Notifications = await import('expo-notifications');
+
+  return Notifications.addPushTokenListener((devicePushToken) => {
+    void registerNativePushDevice(devicePushToken).catch(() => false);
+  });
 }
