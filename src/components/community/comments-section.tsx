@@ -6,10 +6,9 @@ import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { Chip } from '@/components/ui/chip';
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { fontFamily, fontWeight, palette, radii, spacing, typeScale } from '@/design';
-import { useApiResource } from '@/hooks/use-api-resource';
+import { usePaginatedResource } from '@/hooks/use-paginated-resource';
 import { ApiError, apiRequest } from '@/services/api';
 import { invalidateResource } from '@/services/resource-cache';
-import type { Paginated } from '@/types/api';
 
 type Comment = {
   id: number;
@@ -29,7 +28,14 @@ export function CommentsSection({ slug, enabled = true }: { slug: string; enable
   const [sort, setSort] = useState<'popular' | 'newest'>('popular');
   const basePath = '/contents/' + encodeURIComponent(slug) + '/comments';
   const path = basePath + '?sort=' + sort;
-  const { data, refresh } = useApiResource<Paginated<Comment>>(path, { data: [] }, 15_000);
+  const {
+    data,
+    items,
+    refresh,
+    hasMore,
+    loadMore,
+    loadingMore,
+  } = usePaginatedResource<Comment>(path, 15_000);
   const [body, setBody] = useState('');
   const [replyTo, setReplyTo] = useState<Comment | null>(null);
   const [sending, setSending] = useState(false);
@@ -99,7 +105,7 @@ export function CommentsSection({ slug, enabled = true }: { slug: string; enable
           <Chip label="جدیدترین" active={sort === 'newest'} onPress={() => setSort('newest')} />
         </View>
         <View style={styles.titleWrap}>
-          <Text style={styles.count}>{(data.total ?? data.data.length).toLocaleString('fa-IR')}</Text>
+          <Text style={styles.count}>{(data.total ?? items.length).toLocaleString('fa-IR')}</Text>
           <Text style={styles.title}>گفتگو</Text>
         </View>
       </View>
@@ -129,7 +135,7 @@ export function CommentsSection({ slug, enabled = true }: { slug: string; enable
       </View>
 
       <View style={styles.list}>
-        {data.data.map((comment) => (
+        {items.map((comment) => (
           <CommentItem
             key={comment.id}
             comment={comment}
@@ -139,6 +145,17 @@ export function CommentsSection({ slug, enabled = true }: { slug: string; enable
           />
         ))}
       </View>
+
+      {hasMore ? (
+        <PressableScale
+          disabled={loadingMore}
+          onPress={() => void loadMore()}
+          style={styles.more}>
+          <Text style={styles.moreText}>
+            {loadingMore ? 'در حال دریافت…' : 'گفتگوهای بیشتر'}
+          </Text>
+        </PressableScale>
+      ) : null}
     </View>
   );
 }
@@ -264,6 +281,22 @@ const styles = StyleSheet.create({
   },
   sendText: { color: palette.ink, fontFamily: fontFamily.black, fontWeight: fontWeight.black, fontSize: typeScale.caption },
   list: { gap: spacing.sm, marginTop: spacing.md },
+  more: {
+    minHeight: 46,
+    marginTop: spacing.md,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: 'rgba(88,244,255,0.14)',
+    backgroundColor: 'rgba(88,244,255,0.045)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  moreText: {
+    color: palette.cyan,
+    fontFamily: fontFamily.bold,
+    fontWeight: fontWeight.bold,
+    fontSize: typeScale.caption,
+  },
   comment: {
     borderRadius: radii.lg,
     borderWidth: 1,
