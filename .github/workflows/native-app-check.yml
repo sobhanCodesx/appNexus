@@ -1,0 +1,32 @@
+name: Native App Check
+
+on:
+  push:
+    branches:
+      - native-premium-v1
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'app.json'
+      - 'eas.json'
+      - 'tsconfig.json'
+
+jobs:
+  app:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - name: Bundle Android app
+        env:
+          EXPO_PUBLIC_PLAYNEXUS_URL: https://playnexus.ir
+          EXPO_PUBLIC_PLAYNEXUS_API_URL: https://playnexus.ir/api/v1
+        run: npx expo export --platform android --output-dir /tmp/playnexus-export --clear

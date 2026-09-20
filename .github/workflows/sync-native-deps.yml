@@ -1,0 +1,53 @@
+name: Sync Native Dependencies
+
+on:
+  push:
+    branches:
+      - native-premium-v1
+    paths:
+      - package.json
+      - .github/workflows/sync-native-deps.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: native-dependency-lock
+  cancel-in-progress: false
+
+jobs:
+  lockfile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: native-premium-v1
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Generate lockfile
+        run: npm install
+      - name: Commit lockfile
+        run: |
+          if git diff --quiet package-lock.json; then
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          git commit -m "chore(native): sync dependency lockfile"
+
+          for attempt in 1 2 3 4 5; do
+            git fetch origin native-premium-v1
+            git rebase origin/native-premium-v1
+            if git push origin HEAD:native-premium-v1; then
+              exit 0
+            fi
+            sleep 2
+          done
+
+          echo "Could not publish lockfile after retries."
+          exit 1

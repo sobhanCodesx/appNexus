@@ -8,21 +8,24 @@
       "distribution": "internal",
       "environment": "development",
       "env": {
-        "EXPO_PUBLIC_PLAYNEXUS_URL": "https://playnexus.ir"
+        "EXPO_PUBLIC_PLAYNEXUS_URL": "https://playnexus.ir",
+        "EXPO_PUBLIC_PLAYNEXUS_API_URL": "https://playnexus.ir/api/v1"
       }
     },
     "preview": {
       "distribution": "internal",
       "environment": "preview",
       "env": {
-        "EXPO_PUBLIC_PLAYNEXUS_URL": "https://playnexus.ir"
+        "EXPO_PUBLIC_PLAYNEXUS_URL": "https://playnexus.ir",
+        "EXPO_PUBLIC_PLAYNEXUS_API_URL": "https://playnexus.ir/api/v1"
       }
     },
     "production": {
       "autoIncrement": true,
       "environment": "production",
       "env": {
-        "EXPO_PUBLIC_PLAYNEXUS_URL": "https://playnexus.ir"
+        "EXPO_PUBLIC_PLAYNEXUS_URL": "https://playnexus.ir",
+        "EXPO_PUBLIC_PLAYNEXUS_API_URL": "https://playnexus.ir/api/v1"
       }
     }
   },
