@@ -80,11 +80,25 @@ export function ContentCard({
         </Text>
 
         <View style={styles.footer}>
-          <View style={styles.footerMetric}>
-            <View style={styles.metricDot} />
-            <Text style={styles.footerText}>
-              {item.views ? item.views.toLocaleString('fa-IR') + ' بازدید' : 'تازه'}
-            </Text>
+          <View style={styles.footerMetrics}>
+            <View style={styles.footerMetric}>
+              <View style={styles.metricDot} />
+              <Text style={styles.footerText}>
+                {item.views ? item.views.toLocaleString('fa-IR') : 'تازه'}
+              </Text>
+            </View>
+            {(item.likes_count || 0) > 0 ? (
+              <View style={styles.footerMetric}>
+                <Text style={styles.metricGlyph}>♥</Text>
+                <Text style={styles.footerText}>{(item.likes_count || 0).toLocaleString('fa-IR')}</Text>
+              </View>
+            ) : null}
+            {(item.comments_count || 0) > 0 ? (
+              <View style={styles.footerMetric}>
+                <Text style={styles.metricGlyph}>◌</Text>
+                <Text style={styles.footerText}>{(item.comments_count || 0).toLocaleString('fa-IR')}</Text>
+              </View>
+            ) : null}
           </View>
           <View style={styles.openOrb}>
             <View style={styles.openArrow} />
@@ -190,10 +204,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  footerMetrics: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
   footerMetric: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
+  },
+  metricGlyph: {
+    color: palette.cyan,
+    fontSize: 9,
+    fontFamily: fontFamily.bold,
+    fontWeight: fontWeight.bold,
   },
   metricDot: {
     width: 5,
