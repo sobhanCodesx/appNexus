@@ -188,7 +188,6 @@ export default function HomeScreen() {
                       compact
                       title="مسیر سریع"
                     eyebrow="JUMP IN"
-                    action="همه‌چی نزدیکه"
                   />
                 </View>
 
