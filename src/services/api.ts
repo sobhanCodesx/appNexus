@@ -37,12 +37,14 @@ export async function apiRequest<T>(
   const token = options.auth === false ? null : await getAccessToken();
 
   try {
+    const isMultipart = typeof FormData !== 'undefined' && init.body instanceof FormData;
+
     const response = await fetch(PLAYNEXUS_API_URL + path, {
       ...init,
       signal: controller.signal,
       headers: {
         Accept: 'application/json',
-        'Content-Type': 'application/json',
+        ...(isMultipart ? {} : { 'Content-Type': 'application/json' }),
         ...(token ? { Authorization: 'Bearer ' + token } : {}),
         ...(init.headers ?? {}),
       },
