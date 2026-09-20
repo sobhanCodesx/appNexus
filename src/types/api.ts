@@ -37,6 +37,8 @@ export type ContentChannel = {
   slug?: string;
   url?: string;
   avatar_url?: ImageUrl;
+  logo_url?: ImageUrl;
+  cover_url?: ImageUrl;
 };
 
 export type ContentCard = {
@@ -70,6 +72,16 @@ export type ContentCard = {
   } | null;
 };
 
+export type VideoPlaylistContext = {
+  id: number;
+  title: string;
+  slug: string;
+  channel_name?: string | null;
+  is_public?: boolean;
+  current_id?: number;
+  items?: ContentCard[];
+};
+
 export type ContentDetailPayload = {
   content: ContentCard & {
     body?: string | null;
@@ -83,7 +95,7 @@ export type ContentDetailPayload = {
     subscribers_count?: number;
     is_subscribed?: boolean;
   }) | null;
-  playlist?: Record<string, unknown> | null;
+  playlist?: VideoPlaylistContext | null;
   related?: ContentCard[];
 };
 
