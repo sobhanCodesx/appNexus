@@ -1,3 +1,11 @@
+import {
+  Vazirmatn_400Regular,
+  Vazirmatn_500Medium,
+  Vazirmatn_600SemiBold,
+  Vazirmatn_700Bold,
+  Vazirmatn_900Black,
+  useFonts,
+} from '@expo-google-fonts/vazirmatn';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -15,9 +23,23 @@ void SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   useNotificationNavigation();
 
+  const [fontsLoaded, fontError] = useFonts({
+    Vazirmatn_400Regular,
+    Vazirmatn_500Medium,
+    Vazirmatn_600SemiBold,
+    Vazirmatn_700Bold,
+    Vazirmatn_900Black,
+  });
+
   useEffect(() => {
-    void SplashScreen.hideAsync();
-  }, []);
+    if (fontsLoaded || fontError) {
+      void SplashScreen.hideAsync();
+    }
+  }, [fontError, fontsLoaded]);
+
+  if (!fontsLoaded && !fontError) {
+    return null;
+  }
 
   return (
     <GestureHandlerRootView style={styles.root}>
