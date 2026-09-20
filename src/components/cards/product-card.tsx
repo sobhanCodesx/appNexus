@@ -56,6 +56,9 @@ export function ProductCard({
     product.pricing?.discount_amount
       && product.pricing.discount_amount > 0,
   );
+  const discountPercent = hasDiscount && regularPrice
+    ? Math.max(1, Math.round(((product.pricing?.discount_amount || 0) / regularPrice) * 100))
+    : 0;
 
   return (
     <PressableScale
@@ -89,7 +92,7 @@ export function ProductCard({
         <View style={styles.topMeta}>
           {hasDiscount ? (
             <View style={styles.discount}>
-              <Text style={styles.discountText}>SALE</Text>
+              <Text style={styles.discountText}>{discountPercent ? discountPercent + '% OFF' : 'SALE'}</Text>
             </View>
           ) : (
             <View style={styles.storeBadge}>
