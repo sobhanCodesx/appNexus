@@ -92,6 +92,25 @@ export default function LoginScreen() {
           <PressableScale disabled={submitting} onPress={() => void login()} style={styles.button}>
             <Text style={styles.buttonText}>{submitting ? 'در حال ورود…' : 'ورود'}</Text>
           </PressableScale>
+
+          <View style={styles.quickLinks}>
+            <PressableScale haptic={false} onPress={() => router.push('/auth/otp')} style={styles.link}>
+              <Text style={styles.linkText}>ورود با کد یکبارمصرف</Text>
+            </PressableScale>
+            <PressableScale haptic={false} onPress={() => router.push('/auth/forgot')} style={styles.link}>
+              <Text style={styles.linkText}>رمز رو فراموش کردی؟</Text>
+            </PressableScale>
+          </View>
+
+          <View style={styles.dividerRow}>
+            <View style={styles.divider} />
+            <Text style={styles.dividerText}>یا</Text>
+            <View style={styles.divider} />
+          </View>
+
+          <PressableScale onPress={() => router.push('/auth/register')} style={styles.register}>
+            <Text style={styles.registerText}>ساخت حساب PlayNexus</Text>
+          </PressableScale>
         </View>
       </KeyboardAvoidingView>
     </Screen>
@@ -146,6 +165,51 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   buttonText: { color: palette.ink, fontSize: typeScale.body, fontWeight: fontWeight.black },
+  quickLinks: {
+    marginTop: spacing.sm,
+    flexDirection: 'row-reverse',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  link: {
+    flex: 1,
+    minHeight: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  linkText: {
+    color: palette.textMuted,
+    fontSize: typeScale.caption,
+    fontWeight: fontWeight.bold,
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginVertical: spacing.sm,
+  },
+  divider: {
+    flex: 1,
+    height: 1,
+    backgroundColor: palette.line,
+  },
+  dividerText: {
+    color: palette.textDim,
+    fontSize: typeScale.caption,
+  },
+  register: {
+    minHeight: 56,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(77,163,255,0.30)',
+    backgroundColor: 'rgba(77,163,255,0.07)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  registerText: {
+    color: palette.cyan,
+    fontWeight: fontWeight.black,
+  },
   error: {
     color: palette.danger,
     fontSize: typeScale.caption,
