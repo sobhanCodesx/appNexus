@@ -6,16 +6,30 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { fontFamily, fontWeight, palette, spacing } from '@/design';
 import { usePaginatedResource } from '@/hooks/use-paginated-resource';
-import type { ContentCard } from '@/types/api';
 import { PressableScale } from '@/components/ui/pressable-scale';
 
-type StoryItem = ContentCard & {
-  body?: string | null;
-  feed_slug?: string | null;
-  media?: { type?: string | null; url?: string | null; thumbnail?: string | null }[];
-  author?: { name?: string | null; avatar_url?: string | null };
+type StoryItem = {
+  id: number;
+  type: 'story';
+  title: string;
+  slug: string;
+  excerpt?: string | null;
+  media_type?: 'image' | 'video' | null;
+  media_url?: string | null;
+  thumbnail_url?: string | null;
+  duration?: number | null;
+  link_url?: string | null;
+  link_label?: string | null;
+  published_at?: string | null;
+  author?: { name?: string | null; avatar_url?: string | null } | null;
+  game?: {
+    id: number;
+    name: string;
+    slug: string;
+    cover_url?: string | null;
+    logo_url?: string | null;
+  } | null;
 };
-
 type StoryBubble = {
   key: string;
   slug: string;
@@ -27,23 +41,17 @@ const fallback = require('../../../assets/images/logo-glow.png');
 const sessionSeenStories = new Set<string>();
 
 function slugOf(item: StoryItem) {
-  return item.slug || item.feed_slug || String(item.id);
+  return item.slug;
 }
 
 function mediaOf(item: StoryItem) {
-  const media = item.media?.[0];
   return item.thumbnail_url
-    || media?.thumbnail
-    || (media?.type === 'image' ? media.url : null)
-    || item.image_url
-    || item.cover_url
-    || item.game?.cover_url;
+    || item.media_url
+    || item.game?.cover_url
+    || item.game?.logo_url;
 }
 
 function identityOf(item: StoryItem) {
-  const channelKey = item.channel?.slug || item.channel?.id;
-  if (channelKey) return 'channel-' + channelKey;
-
   const gameKey = item.game?.slug || item.game?.id;
   if (gameKey) return 'game-' + gameKey;
 
@@ -52,22 +60,19 @@ function identityOf(item: StoryItem) {
 
 function avatarOf(item: StoryItem) {
   return item.author?.avatar_url
-    || item.channel?.logo_url
-    || item.channel?.avatar_url
-    || item.channel?.cover_url
+    || item.game?.logo_url
     || item.game?.cover_url
     || mediaOf(item);
 }
 
 function nameOf(item: StoryItem) {
   return item.author?.name
-    || item.channel?.name
     || item.game?.name
     || 'PlayNexus';
 }
 
 export function StoryTray() {
-  const stories = usePaginatedResource<StoryItem>('/feed?tab=for-you&per_page=18', 45_000);
+  const stories = usePaginatedResource<StoryItem>('/stories?per_page=18', 45_000);
   const [, setSeenVersion] = useState(0);
 
   const bubbles = useMemo<StoryBubble[]>(() => {

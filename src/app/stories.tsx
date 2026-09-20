@@ -15,47 +15,54 @@ import { Screen } from '@/components/ui/screen';
 import { SkeletonBox } from '@/components/ui/skeleton';
 import { fontFamily, fontWeight, palette, spacing } from '@/design';
 import { usePaginatedResource } from '@/hooks/use-paginated-resource';
-import type { ContentCard } from '@/types/api';
 
-type StoryItem = ContentCard & {
-  body?: string | null;
-  feed_slug?: string | null;
-  media?: { type?: string | null; url?: string | null; thumbnail?: string | null }[];
-  author?: { name?: string | null; avatar_url?: string | null };
+type StoryItem = {
+  id: number;
+  type: 'story';
+  title: string;
+  slug: string;
+  excerpt?: string | null;
+  media_type?: 'image' | 'video' | null;
+  media_url?: string | null;
+  thumbnail_url?: string | null;
+  duration?: number | null;
+  link_url?: string | null;
+  link_label?: string | null;
+  published_at?: string | null;
+  author?: { name?: string | null; avatar_url?: string | null } | null;
+  game?: {
+    id: number;
+    name: string;
+    slug: string;
+    cover_url?: string | null;
+    logo_url?: string | null;
+  } | null;
 };
+
 
 const fallback = require('../../assets/images/logo-glow.png');
 const STORY_DURATION = 6200;
 
 function slugOf(item: StoryItem) {
-  return item.slug || item.feed_slug || String(item.id);
+  return item.slug;
 }
 
 function imageOf(item: StoryItem) {
-  const media = item.media?.[0];
   return item.thumbnail_url
-    || media?.thumbnail
-    || (media?.type === 'image' ? media.url : null)
-    || item.image_url
-    || item.cover_url
+    || item.media_url
     || item.game?.cover_url
-    || item.channel?.cover_url
-    || item.channel?.logo_url
-    || item.channel?.avatar_url;
+    || item.game?.logo_url;
 }
 
 function avatarOf(item: StoryItem) {
   return item.author?.avatar_url
-    || item.channel?.logo_url
-    || item.channel?.avatar_url
-    || item.channel?.cover_url
+    || item.game?.logo_url
     || item.game?.cover_url
     || imageOf(item);
 }
 
 function authorOf(item: StoryItem) {
   return item.author?.name
-    || item.channel?.name
     || item.game?.name
     || 'PlayNexus';
 }
@@ -63,7 +70,7 @@ function authorOf(item: StoryItem) {
 export default function StoriesScreen() {
   const params = useLocalSearchParams<{ start?: string }>();
   const start = Array.isArray(params.start) ? params.start[0] : params.start;
-  const stories = usePaginatedResource<StoryItem>('/feed?tab=for-you&per_page=24', 45_000);
+  const stories = usePaginatedResource<StoryItem>('/stories?per_page=24', 45_000);
   const items = useMemo(
     () => (stories.data.data || []).filter((item) => Boolean(imageOf(item))),
     [stories.data.data],
