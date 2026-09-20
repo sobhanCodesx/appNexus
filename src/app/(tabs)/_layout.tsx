@@ -1,4 +1,5 @@
 import { BlurView } from 'expo-blur';
+import * as Haptics from 'expo-haptics';
 import { Tabs } from 'expo-router';
 import { Platform, StyleSheet } from 'react-native';
 
@@ -8,6 +9,11 @@ import { fontWeight, layout, palette, typeScale } from '@/design';
 export default function TabsLayout() {
   return (
     <Tabs
+      screenListeners={{
+        tabPress: () => {
+          void Haptics.selectionAsync();
+        },
+      }}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: palette.white,
