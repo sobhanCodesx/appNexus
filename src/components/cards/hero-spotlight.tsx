@@ -67,6 +67,9 @@ export function HeroSpotlight({
   const source = slide?.mobile_image_url || slide?.desktop_image_url
     ? { uri: String(slide?.mobile_image_url || slide?.desktop_image_url) }
     : fallbackImage;
+  const description = slide
+    ? slide.description
+    : 'محتوایی که مهمه، بازی‌هایی که دنبال می‌کنی و هر چیزی که باید قبل از بقیه ببینی.';
 
   return (
     <GestureDetector gesture={gesture}>
@@ -123,9 +126,11 @@ export function HeroSpotlight({
               {slide?.title || 'دنیای گیم تو، این بار واقعاً برای موبایل'}
             </Text>
 
-            <Text numberOfLines={2} style={styles.description}>
-              {slide?.description || 'محتوایی که مهمه، بازی‌هایی که دنبال می‌کنی و هر چیزی که باید قبل از بقیه ببینی.'}
-            </Text>
+            {description ? (
+              <Text numberOfLines={2} style={styles.description}>
+                {description}
+              </Text>
+            ) : null}
 
             <View style={styles.bottomRow}>
               <View style={styles.signalMeta}>
