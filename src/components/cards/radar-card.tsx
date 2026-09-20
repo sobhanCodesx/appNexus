@@ -12,10 +12,12 @@ export function RadarCard({
   item,
   width = 252,
   onPress,
+  compact = false,
 }: {
   item: GameRadarItem;
   width?: number | string;
   onPress?: () => void;
+  compact?: boolean;
 }) {
   const image = item.banner_url || item.cover_url;
 
@@ -23,7 +25,7 @@ export function RadarCard({
     <PressableScale
       onPress={onPress}
       pressedScale={0.982}
-      style={[styles.card, { width } as never]}>
+      style={[styles.card, compact && styles.compactCard, { width } as never]}>
       <Image
         source={image ? { uri: image } : fallbackImage}
         style={StyleSheet.absoluteFill}
@@ -59,7 +61,7 @@ export function RadarCard({
 
       <View style={styles.copy}>
         <Text style={styles.eyebrow}>NEXT ON YOUR RADAR</Text>
-        <Text numberOfLines={2} style={styles.title}>{item.title}</Text>
+        <Text numberOfLines={2} style={[styles.title, compact && styles.compactTitle]}>{item.title}</Text>
 
         <View style={styles.footer}>
           <Text style={styles.subtitle}>سیگنال انتشار PlayNexus</Text>
@@ -87,6 +89,9 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.10)',
     backgroundColor: palette.surface,
     ...shadow.soft,
+  },
+  compactCard: {
+    height: 262,
   },
   radarRingOuter: {
     position: 'absolute',
@@ -186,6 +191,10 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
     textAlign: 'right',
+  },
+  compactTitle: {
+    fontSize: 20,
+    lineHeight: 25,
   },
   footer: {
     width: '100%',
