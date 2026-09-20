@@ -85,9 +85,11 @@ export default function HomeScreen() {
     : data.latest_products || [];
 
   const latestVideos = normalizeContentCards(
-    data.latest_videos?.length
-      ? data.latest_videos
-      : feed.filter((item) => item.type === 'video').slice(0, 10),
+    data.personalized_home?.videos?.length
+      ? data.personalized_home.videos
+      : data.latest_videos?.length
+        ? data.latest_videos
+        : feed.filter((item) => item.type === 'video').slice(0, 10),
   );
 
   const latestGames: HomeGame[] = data.latest_games?.length
