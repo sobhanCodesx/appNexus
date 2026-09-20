@@ -4,6 +4,18 @@ import { PLAYNEXUS_API_URL } from '@/config/app';
 
 const TOKEN_KEY = 'playnexus.mobile-access-token.v1';
 
+type AccessTokenListener = (token: string | null) => void;
+const accessTokenListeners = new Set<AccessTokenListener>();
+
+function emitAccessTokenChange(token: string | null) {
+  for (const listener of accessTokenListeners) listener(token);
+}
+
+export function subscribeToAccessTokenChanges(listener: AccessTokenListener) {
+  accessTokenListeners.add(listener);
+  return () => accessTokenListeners.delete(listener);
+}
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -21,10 +33,12 @@ export async function getAccessToken() {
 export async function setAccessToken(token: string | null) {
   if (token) {
     await SecureStore.setItemAsync(TOKEN_KEY, token);
+    emitAccessTokenChange(token);
     return;
   }
 
   await SecureStore.deleteItemAsync(TOKEN_KEY);
+  emitAccessTokenChange(null);
 }
 
 async function parseResponse(response: Response) {
