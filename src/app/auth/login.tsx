@@ -2,7 +2,7 @@ import * as Google from 'expo-auth-session/providers/google';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Platform, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import {
@@ -26,6 +26,8 @@ const googleAndroidClientId =
   process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || googleWebClientId;
 const googleIosClientId =
   process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || googleWebClientId;
+const googleConfigured = Boolean(googleWebClientId || googleAndroidClientId || googleIosClientId);
+const googleFallbackClientId = 'not-configured.apps.googleusercontent.com';
 
 export default function LoginScreen() {
   const [identifier, setIdentifier] = useState('');
@@ -34,50 +36,13 @@ export default function LoginScreen() {
   const [googleBusy, setGoogleBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [googleRequest, googleResponse, promptGoogle] = Google.useAuthRequest({
-    clientId: googleWebClientId,
-    webClientId: googleWebClientId,
-    androidClientId: googleAndroidClientId,
-    iosClientId: googleIosClientId,
+  const [googleRequest, , promptGoogle] = Google.useAuthRequest({
+    clientId: googleWebClientId || googleFallbackClientId,
+    webClientId: googleWebClientId || googleFallbackClientId,
+    androidClientId: googleAndroidClientId || googleFallbackClientId,
+    iosClientId: googleIosClientId || googleFallbackClientId,
     selectAccount: true,
   });
-
-  useEffect(() => {
-    if (googleResponse?.type !== 'success') return;
-    const idToken = googleResponse.params.id_token
-      || googleResponse.authentication?.idToken;
-
-    if (!idToken) {
-      setGoogleBusy(false);
-      setError('Google توکن هویتی معتبر برنگرداند.');
-      return;
-    }
-
-    void (async () => {
-      try {
-        const result = await apiRequest<LoginResponse>(
-          '/auth/google',
-          {
-            method: 'POST',
-            body: JSON.stringify({
-              id_token: idToken,
-              device_name: Platform.OS + ' PlayNexus',
-            }),
-          },
-          { auth: false },
-        );
-
-        await setAccessToken(result.access_token);
-        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        router.replace('/(tabs)/profile');
-      } catch (value) {
-        setError(value instanceof Error ? value.message : 'ورود با Google انجام نشد.');
-        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      } finally {
-        setGoogleBusy(false);
-      }
-    })();
-  }, [googleResponse]);
 
   const login = async () => {
     if (!identifier.trim() || !password) return;
@@ -110,19 +75,45 @@ export default function LoginScreen() {
   };
 
   const google = async () => {
-    if (!googleWebClientId || !googleAndroidClientId || !googleIosClientId) {
+    if (!googleConfigured) {
       setError('Google Client ID برای این build تنظیم نشده است.');
       return;
     }
 
     setError(null);
     setGoogleBusy(true);
+
     try {
-      const result = await promptGoogle();
-      if (result.type !== 'success') setGoogleBusy(false);
+      const authResult = await promptGoogle();
+      if (authResult.type !== 'success') return;
+
+      const idToken = authResult.params.id_token
+        || authResult.authentication?.idToken;
+
+      if (!idToken) {
+        throw new Error('Google توکن هویتی معتبر برنگرداند.');
+      }
+
+      const result = await apiRequest<LoginResponse>(
+        '/auth/google',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            id_token: idToken,
+            device_name: Platform.OS + ' PlayNexus',
+          }),
+        },
+        { auth: false },
+      );
+
+      await setAccessToken(result.access_token);
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.replace('/(tabs)/profile');
     } catch (value) {
+      setError(value instanceof Error ? value.message : 'ورود با Google انجام نشد.');
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
       setGoogleBusy(false);
-      setError(value instanceof Error ? value.message : 'Google Sign-In باز نشد.');
     }
   };
 
@@ -134,7 +125,7 @@ export default function LoginScreen() {
       step="PLAYER ACCESS">
 
       <PressableScale
-        disabled={!googleRequest || googleBusy}
+        disabled={!googleRequest || googleBusy || !googleConfigured}
         onPress={() => void google()}
         style={styles.google}>
         <View style={styles.googleMark}>
