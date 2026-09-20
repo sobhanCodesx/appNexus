@@ -11,8 +11,9 @@ import { PageHeader } from '@/components/ui/page-header';
 import { QuickPortal } from '@/components/ui/quick-portal';
 import { Screen } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section-header';
-import { SkeletonRail } from '@/components/ui/skeleton';
+import { SkeletonHero, SkeletonRail, SkeletonStudioRail } from '@/components/ui/skeleton';
 import {
+  fontFamily,
   fontWeight,
   layout,
   palette,
@@ -99,10 +100,14 @@ export default function HomeScreen() {
             return (
               <Reveal delay={40}>
                 <View style={styles.heroSection}>
-                  <HeroSpotlight
-                    slide={heroSlide}
-                    onPress={heroSlide ? openHero : undefined}
-                  />
+                  {loading && !heroSlide ? (
+                    <SkeletonHero />
+                  ) : (
+                    <HeroSpotlight
+                      slide={heroSlide}
+                      onPress={heroSlide ? openHero : undefined}
+                    />
+                  )}
                 </View>
               </Reveal>
             );
@@ -134,6 +139,7 @@ export default function HomeScreen() {
 
                 <ScrollView
                   horizontal
+                  decelerationRate="fast"
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={styles.portalRail}>
                   <QuickPortal
@@ -198,6 +204,7 @@ export default function HomeScreen() {
                     {feedItems.length > 1 ? (
                       <ScrollView
                         horizontal
+                        decelerationRate="fast"
                         showsHorizontalScrollIndicator={false}
                         contentContainerStyle={styles.horizontalRow}>
                         {feedItems.slice(1, 9).map((content) => (
@@ -261,21 +268,28 @@ export default function HomeScreen() {
                 />
               </View>
 
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.studioRow}>
-                {(data.latest_studios || []).map((studio) => (
-                  <StudioCard
-                    key={studio.id}
-                    item={studio}
-                    onPress={() => router.push({
-                      pathname: '/studio/[slug]',
-                      params: { slug: studio.slug },
-                    })}
-                  />
-                ))}
-              </ScrollView>
+              {(data.latest_studios || []).length ? (
+                <ScrollView
+                  horizontal
+                  decelerationRate="fast"
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.studioRow}>
+                  {(data.latest_studios || []).map((studio) => (
+                    <StudioCard
+                      key={studio.id}
+                      item={studio}
+                      onPress={() => router.push({
+                        pathname: '/studio/[slug]',
+                        params: { slug: studio.slug },
+                      })}
+                    />
+                  ))}
+                </ScrollView>
+              ) : loading ? (
+                <SkeletonStudioRail />
+              ) : (
+                <EmptyRail loading={false} />
+              )}
             </View>
           );
         }}
@@ -437,6 +451,7 @@ const styles = StyleSheet.create({
   pulseKicker: {
     color: palette.cyan,
     fontSize: 9,
+    fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
     letterSpacing: 1.1,
   },
@@ -444,12 +459,14 @@ const styles = StyleSheet.create({
     color: palette.white,
     fontSize: typeScale.bodySm,
     lineHeight: 20,
+    fontFamily: fontFamily.bold,
     fontWeight: fontWeight.bold,
     textAlign: 'right',
     marginTop: 6,
   },
   pulseMeta: {
     color: palette.textDim,
+    fontFamily: fontFamily.regular,
     fontSize: 9,
     marginTop: 6,
     textAlign: 'right',
@@ -476,12 +493,14 @@ const styles = StyleSheet.create({
   emptyEyebrow: {
     color: palette.cyan,
     fontSize: 9,
+    fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
     letterSpacing: 1.2,
   },
   emptyTitle: {
     color: palette.textMuted,
     fontSize: typeScale.bodySm,
+    fontFamily: fontFamily.bold,
     fontWeight: fontWeight.bold,
     marginTop: 5,
   },
