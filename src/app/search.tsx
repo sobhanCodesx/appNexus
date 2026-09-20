@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import {
   Keyboard,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
