@@ -3,6 +3,7 @@ import { Image } from 'expo-image';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { fontWeight, layout, palette, shadow, spacing, typeScale } from '@/design';
+import { LivePulse } from './motion-primitives';
 import { PressableScale } from './pressable-scale';
 
 export function PageHeader({
@@ -41,7 +42,7 @@ export function PageHeader({
 
       <View style={styles.copy}>
         <View style={styles.signalRow}>
-          <View style={styles.signalDot} />
+          <LivePulse size={5} color={palette.cyan} />
           <Text style={styles.subtitle}>{subtitle || 'PLAYNEXUS SIGNAL'}</Text>
         </View>
         <Text style={styles.title}>{title}</Text>
