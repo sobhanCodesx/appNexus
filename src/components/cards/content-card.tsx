@@ -40,7 +40,8 @@ export function ContentCard({
         style={StyleSheet.absoluteFill}
         contentFit="cover"
         recyclingKey={String(item.id)}
-        transition={180}
+        transition={160}
+        cachePolicy="memory-disk"
       />
 
       <LinearGradient
