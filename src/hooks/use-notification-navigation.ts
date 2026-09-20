@@ -48,6 +48,10 @@ export function useNotificationNavigation() {
     const linkingSubscription = Linking.addEventListener(
       'url',
       ({ url }) => {
+        if (url.includes('+expo-auth-session') || url.includes('/oauthredirect')) {
+          return;
+        }
+
         const parsed = Linking.parse(url);
         const nested = typeof parsed.queryParams?.url === 'string'
           ? parsed.queryParams.url
