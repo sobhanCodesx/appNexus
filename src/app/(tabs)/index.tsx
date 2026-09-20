@@ -64,7 +64,13 @@ export default function HomeScreen() {
                 <View style={styles.headerPad}><SectionHeader title="برای تو" eyebrow="SMART FEED" action="تازه‌ها" /></View>
                 {feed.length ? (
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalRow}>
-                    {feed.slice(0, 8).map((content) => <ContentCard key={content.id} item={content} />)}
+                    {feed.slice(0, 8).map((content) => (
+                      <ContentCard
+                        key={content.id}
+                        item={content}
+                        onPress={() => router.push({ pathname: '/content/[slug]', params: { slug: content.slug } })}
+                      />
+                    ))}
                   </ScrollView>
                 ) : <EmptyRail loading={loading} />}
               </View>
