@@ -28,11 +28,89 @@ export default function RootLayout() {
             headerShown: false,
             contentStyle: { backgroundColor: palette.ink },
             animation: 'fade_from_bottom',
+            gestureEnabled: true,
           }}>
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="auth/login" options={{ presentation: 'modal' }} />
-          <Stack.Screen name="search" />
-          <Stack.Screen name="content/[slug]" />
+          <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
+
+          <Stack.Screen
+            name="search"
+            options={{ animation: 'fade_from_bottom' }}
+          />
+
+          <Stack.Screen
+            name="shorts"
+            options={{ animation: 'fade' }}
+          />
+
+          <Stack.Screen
+            name="content/[slug]"
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="product/[slug]"
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="channel/[slug]"
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="studio/[slug]"
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="collection/[slug]"
+            options={{ animation: 'slide_from_right' }}
+          />
+
+          <Stack.Screen
+            name="store"
+            options={{ animation: 'fade_from_bottom' }}
+          />
+          <Stack.Screen
+            name="cart"
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="checkout"
+            options={{ animation: 'slide_from_right' }}
+          />
+
+          <Stack.Screen
+            name="auth/login"
+            options={{
+              presentation: 'modal',
+              animation: 'slide_from_bottom',
+            }}
+          />
+          <Stack.Screen
+            name="auth/register"
+            options={{
+              presentation: 'modal',
+              animation: 'slide_from_bottom',
+            }}
+          />
+          <Stack.Screen
+            name="auth/otp"
+            options={{
+              presentation: 'modal',
+              animation: 'slide_from_bottom',
+            }}
+          />
+          <Stack.Screen
+            name="auth/verify"
+            options={{
+              presentation: 'modal',
+              animation: 'slide_from_bottom',
+            }}
+          />
+          <Stack.Screen
+            name="auth/forgot"
+            options={{
+              presentation: 'modal',
+              animation: 'slide_from_bottom',
+            }}
+          />
         </Stack>
         <ConnectivityBanner />
       </SafeAreaProvider>
