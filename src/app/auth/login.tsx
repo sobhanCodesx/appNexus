@@ -1,18 +1,25 @@
 import * as Google from 'expo-auth-session/providers/google';
 import * as Haptics from 'expo-haptics';
+import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
-import { Platform, StyleSheet, Text, TextInput, View } from 'react-native';
-
 import {
-  AuthFieldLabel,
-  AuthScaffold,
-  authStyles,
-} from '@/components/auth/auth-scaffold';
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+
 import { PressableScale } from '@/components/ui/pressable-scale';
-import { fontFamily, fontWeight, palette, spacing, typeScale } from '@/design';
-import { ApiError, apiRequest, setAccessToken } from '@/services/api';
+import { Screen } from '@/components/ui/screen';
+import { fontFamily, fontWeight, layout, palette, radii, shadow, spacing, typeScale } from '@/design';
+import { apiRequest, setAccessToken } from '@/services/api';
+import { registerNativePushDevice } from '@/services/push';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -22,12 +29,11 @@ type LoginResponse = {
 };
 
 const googleWebClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
-const googleAndroidClientId =
-  process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || googleWebClientId;
-const googleIosClientId =
-  process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || googleWebClientId;
+const googleAndroidClientId = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || googleWebClientId;
+const googleIosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || googleWebClientId;
 const googleConfigured = Boolean(googleWebClientId || googleAndroidClientId || googleIosClientId);
 const googleFallbackClientId = 'not-configured.apps.googleusercontent.com';
+const logo = require('../../../assets/images/playnexus-app-icon.png');
 
 export default function LoginScreen() {
   const [identifier, setIdentifier] = useState('');
@@ -42,10 +48,18 @@ export default function LoginScreen() {
     androidClientId: googleAndroidClientId || googleFallbackClientId,
     iosClientId: googleIosClientId || googleFallbackClientId,
     selectAccount: true,
+    scopes: ['openid', 'profile', 'email'],
   });
 
+  const finishLogin = async (result: LoginResponse) => {
+    await setAccessToken(result.access_token);
+    void registerNativePushDevice().catch(() => false);
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    router.replace('/(tabs)/profile');
+  };
+
   const login = async () => {
-    if (!identifier.trim() || !password) return;
+    if (!identifier.trim() || !password || submitting) return;
     setSubmitting(true);
     setError(null);
 
@@ -63,35 +77,8 @@ export default function LoginScreen() {
         { auth: false },
       );
 
-      await setAccessToken(result.access_token);
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      router.replace('/(tabs)/profile');
+      await finishLogin(result);
     } catch (value) {
-      if (value instanceof ApiError && value.status === 409) {
-        const payload = value.payload as {
-          code?: string;
-          verification_required?: boolean;
-          channel?: 'email' | 'mobile';
-          identifier?: string;
-        } | null;
-
-        if (
-          payload?.verification_required
-          && payload.code === 'verification_required'
-          && payload.channel
-          && payload.identifier
-        ) {
-          router.replace({
-            pathname: '/auth/verify',
-            params: {
-              channel: payload.channel,
-              identifier: payload.identifier,
-            },
-          });
-          return;
-        }
-      }
-
       setError(value instanceof Error ? value.message : 'ورود انجام نشد.');
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
@@ -101,23 +88,19 @@ export default function LoginScreen() {
 
   const google = async () => {
     if (!googleConfigured) {
-      setError('Google Client ID برای این build تنظیم نشده است.');
+      setError('ورود Google هنوز Client ID موبایل ندارد. تنظیمات OAuth این build را کامل کن.');
       return;
     }
 
-    setError(null);
     setGoogleBusy(true);
+    setError(null);
 
     try {
       const authResult = await promptGoogle();
       if (authResult.type !== 'success') return;
 
-      const idToken = authResult.params.id_token
-        || authResult.authentication?.idToken;
-
-      if (!idToken) {
-        throw new Error('Google توکن هویتی معتبر برنگرداند.');
-      }
+      const idToken = authResult.params.id_token || authResult.authentication?.idToken;
+      if (!idToken) throw new Error('Google توکن هویتی معتبر برنگرداند.');
 
       const result = await apiRequest<LoginResponse>(
         '/auth/google',
@@ -131,9 +114,7 @@ export default function LoginScreen() {
         { auth: false },
       );
 
-      await setAccessToken(result.access_token);
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      router.replace('/(tabs)/profile');
+      await finishLogin(result);
     } catch (value) {
       setError(value instanceof Error ? value.message : 'ورود با Google انجام نشد.');
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -143,151 +124,190 @@ export default function LoginScreen() {
   };
 
   return (
-    <AuthScaffold
-      kicker="PLAYNEXUS ID"
-      title="برگرد به دنیای خودت"
-      subtitle="یک حساب، تمام سیگنال‌ها؛ فید شخصی، ویدیوها، سفارش‌ها و بازی‌هایی که دنبال می‌کنی."
-      step="PLAYER ACCESS">
+    <Screen edges={['top', 'bottom', 'left', 'right']}>
+      <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.content}>
+          <View style={styles.brand}>
+            <View style={styles.logoShell}>
+              <LinearGradient
+                colors={['rgba(88,244,255,0.16)', 'rgba(77,163,255,0.04)']}
+                style={StyleSheet.absoluteFill}
+              />
+              <Image source={logo} style={styles.logo} contentFit="contain" />
+            </View>
+            <View style={styles.brandCopy}>
+              <View style={styles.signalRow}>
+                <View style={styles.signalDot} />
+                <Text style={styles.signal}>PLAYER ACCESS</Text>
+              </View>
+              <Text style={styles.title}>ورود</Text>
+              <Text style={styles.subtitle}>PlayNexus ID</Text>
+            </View>
+          </View>
 
-      <PressableScale
-        disabled={!googleRequest || googleBusy || !googleConfigured}
-        onPress={() => void google()}
-        style={styles.google}>
-        <View style={styles.googleMark}>
-          <Text style={styles.googleMarkText}>G</Text>
-        </View>
-        <Text style={styles.googleText}>
-          {googleBusy ? 'در حال اتصال به Google…' : 'ادامه با Google'}
-        </Text>
-      </PressableScale>
+          <View style={styles.form}>
+            <View>
+              <Text style={styles.label}>شماره موبایل یا ایمیل</Text>
+              <TextInput
+                value={identifier}
+                onChangeText={setIdentifier}
+                placeholder="09xxxxxxxxx"
+                placeholderTextColor={palette.textDim}
+                keyboardType="default"
+                autoCapitalize="none"
+                autoCorrect={false}
+                textAlign="right"
+                style={styles.input}
+              />
+            </View>
 
-      <View style={authStyles.dividerRow}>
-        <View style={authStyles.divider} />
-        <Text style={authStyles.dividerText}>OR PLAYNEXUS ID</Text>
-        <View style={authStyles.divider} />
-      </View>
+            <View>
+              <View style={styles.passwordHeading}>
+                <PressableScale haptic={false} onPress={() => router.push('/auth/forgot')}>
+                  <Text style={styles.forgot}>رمز را فراموش کردم</Text>
+                </PressableScale>
+                <Text style={styles.label}>رمز عبور</Text>
+              </View>
+              <TextInput
+                value={password}
+                onChangeText={setPassword}
+                placeholder="••••••••"
+                placeholderTextColor={palette.textDim}
+                secureTextEntry
+                textAlign="right"
+                style={styles.input}
+                onSubmitEditing={() => void login()}
+              />
+            </View>
 
-      <AuthFieldLabel label="شناسه ورود" meta="EMAIL / MOBILE" />
-      <TextInput
-        value={identifier}
-        onChangeText={setIdentifier}
-        placeholder="ایمیل یا شماره موبایل"
-        placeholderTextColor={palette.textDim}
-        autoCapitalize="none"
-        autoCorrect={false}
-        textAlign="right"
-        style={authStyles.input}
-      />
+            {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      <AuthFieldLabel label="رمز عبور" meta="SECURE" />
-      <TextInput
-        value={password}
-        onChangeText={setPassword}
-        placeholder="رمز عبور"
-        placeholderTextColor={palette.textDim}
-        secureTextEntry
-        textAlign="right"
-        style={authStyles.input}
-        onSubmitEditing={() => void login()}
-      />
+            <PressableScale
+              disabled={submitting}
+              onPress={() => void login()}
+              style={[styles.primary, submitting && styles.disabled]}>
+              <Text style={styles.primaryText}>{submitting ? 'در حال ورود…' : 'ورود به PlayNexus'}</Text>
+              {!submitting ? <View style={styles.arrow} /> : null}
+            </PressableScale>
 
-      {error ? <Text style={authStyles.error}>{error}</Text> : null}
+            <View style={styles.dividerRow}>
+              <View style={styles.divider} />
+              <Text style={styles.dividerText}>یا</Text>
+              <View style={styles.divider} />
+            </View>
 
-      <PressableScale
-        disabled={submitting}
-        onPress={() => void login()}
-        style={authStyles.primary}>
-        <Text style={authStyles.primaryText}>
-          {submitting ? 'در حال ورود…' : 'ورود به PlayNexus'}
-        </Text>
-        {!submitting ? <View style={authStyles.primaryArrow} /> : null}
-      </PressableScale>
+            <PressableScale
+              disabled={!googleRequest || googleBusy || !googleConfigured}
+              onPress={() => void google()}
+              style={[styles.google, (!googleConfigured || googleBusy) && styles.googleDisabled]}>
+              <View style={styles.googleMark}><Text style={styles.googleMarkText}>G</Text></View>
+              <Text style={styles.googleText}>{googleBusy ? 'در حال اتصال…' : 'ادامه با Google'}</Text>
+            </PressableScale>
 
-      <View style={styles.quickRow}>
-        <PressableScale
-          haptic={false}
-          onPress={() => router.push('/auth/otp')}
-          style={styles.quick}>
-          <Text style={styles.quickKicker}>OTP</Text>
-          <Text style={styles.quickTitle}>ورود با کد</Text>
-        </PressableScale>
+            {!googleConfigured ? (
+              <Text style={styles.googleHint}>Google OAuth برای این build نیاز به Client ID دارد.</Text>
+            ) : null}
+          </View>
 
-        <PressableScale
-          haptic={false}
-          onPress={() => router.push('/auth/forgot')}
-          style={styles.quick}>
-          <Text style={styles.quickKicker}>RECOVERY</Text>
-          <Text style={styles.quickTitle}>بازیابی حساب</Text>
-        </PressableScale>
-      </View>
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>حساب نداری؟</Text>
+            <PressableScale haptic={false} onPress={() => router.push('/auth/register')}>
+              <Text style={styles.register}>ساخت حساب</Text>
+            </PressableScale>
+          </View>
 
-      <PressableScale
-        onPress={() => router.push('/auth/register')}
-        style={authStyles.secondary}>
-        <Text style={authStyles.secondaryText}>ساخت PlayNexus ID جدید</Text>
-      </PressableScale>
-    </AuthScaffold>
+          <Text style={styles.note}>کد تأیید فقط هنگام ساخت حساب استفاده می‌شود؛ ورود با رمز مستقیم است.</Text>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  google: {
+  root: { flex: 1 },
+  content: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingHorizontal: layout.screenPadding,
+    paddingVertical: spacing.xxxl,
+  },
+  brand: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginBottom: spacing.xxxl,
+  },
+  logoShell: {
+    width: 74,
+    height: 74,
+    borderRadius: 24,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(88,244,255,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadow.cyanGlow,
+  },
+  logo: { width: 54, height: 54 },
+  brandCopy: { flex: 1, alignItems: 'flex-end' },
+  signalRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 6 },
+  signalDot: { width: 5, height: 5, borderRadius: 5, backgroundColor: palette.cyan },
+  signal: { color: palette.cyan, fontFamily: fontFamily.black, fontSize: 8, letterSpacing: 1.1 },
+  title: { color: palette.white, fontFamily: fontFamily.black, fontWeight: fontWeight.black, fontSize: 38, lineHeight: 45, marginTop: 4 },
+  subtitle: { color: palette.textMuted, fontFamily: fontFamily.medium, fontSize: 11, letterSpacing: 0.8 },
+  form: { gap: spacing.md },
+  label: { color: palette.textMuted, fontFamily: fontFamily.bold, fontSize: 10, textAlign: 'right', marginBottom: 7 },
+  input: {
     minHeight: 58,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.14)',
-    backgroundColor: 'rgba(255,255,255,0.055)',
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-  },
-  googleMark: {
-    width: 30,
-    height: 30,
-    borderRadius: 11,
-    backgroundColor: palette.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  googleMarkText: {
-    color: '#4285F4',
-    fontFamily: fontFamily.black,
-    fontSize: 15,
-  },
-  googleText: {
+    borderColor: palette.line,
+    backgroundColor: 'rgba(255,255,255,0.035)',
     color: palette.white,
-    fontFamily: fontFamily.black,
+    paddingHorizontal: spacing.lg,
+    fontFamily: fontFamily.regular,
     fontSize: typeScale.bodySm,
   },
-  quickRow: {
+  passwordHeading: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  forgot: { color: palette.cyan, fontFamily: fontFamily.bold, fontSize: 9, marginBottom: 7 },
+  error: { color: palette.danger, fontFamily: fontFamily.regular, fontSize: 10, lineHeight: 18, textAlign: 'right' },
+  primary: {
+    minHeight: 58,
+    borderRadius: 18,
+    backgroundColor: palette.white,
     flexDirection: 'row-reverse',
-    gap: spacing.sm,
-    marginTop: spacing.xs,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 9,
+    marginTop: 2,
   },
-  quick: {
-    flex: 1,
-    minHeight: 68,
+  disabled: { opacity: 0.55 },
+  primaryText: { color: palette.ink, fontFamily: fontFamily.black, fontWeight: fontWeight.black, fontSize: 12 },
+  arrow: { width: 7, height: 7, borderLeftWidth: 1.5, borderBottomWidth: 1.5, borderColor: palette.ink, transform: [{ rotate: '45deg' }] },
+  dividerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginVertical: 2 },
+  divider: { flex: 1, height: 1, backgroundColor: palette.line },
+  dividerText: { color: palette.textDim, fontFamily: fontFamily.medium, fontSize: 9 },
+  google: {
+    minHeight: 56,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: palette.line,
-    backgroundColor: 'rgba(255,255,255,0.025)',
-    paddingHorizontal: spacing.md,
-    alignItems: 'flex-end',
+    borderColor: 'rgba(255,255,255,0.13)',
+    backgroundColor: 'rgba(255,255,255,0.045)',
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
     justifyContent: 'center',
+    gap: spacing.sm,
   },
-  quickKicker: {
-    color: palette.cyan,
-    fontFamily: fontFamily.black,
-    fontSize: 8,
-    fontWeight: fontWeight.black,
-    letterSpacing: 0.8,
-  },
-  quickTitle: {
-    color: palette.text,
-    fontFamily: fontFamily.black,
-    fontSize: typeScale.caption,
-    fontWeight: fontWeight.black,
-    marginTop: 3,
-  },
+  googleDisabled: { opacity: 0.54 },
+  googleMark: { width: 28, height: 28, borderRadius: 10, backgroundColor: palette.white, alignItems: 'center', justifyContent: 'center' },
+  googleMarkText: { color: '#4285F4', fontFamily: fontFamily.black, fontWeight: fontWeight.black, fontSize: 14 },
+  googleText: { color: palette.white, fontFamily: fontFamily.black, fontWeight: fontWeight.black, fontSize: 11 },
+  googleHint: { color: palette.textDim, fontFamily: fontFamily.regular, fontSize: 9, lineHeight: 15, textAlign: 'center' },
+  footer: { marginTop: spacing.xl, flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  footerText: { color: palette.textMuted, fontFamily: fontFamily.regular, fontSize: 10 },
+  register: { color: palette.cyan, fontFamily: fontFamily.black, fontWeight: fontWeight.black, fontSize: 10 },
+  note: { marginTop: spacing.md, color: palette.textDim, fontFamily: fontFamily.regular, fontSize: 8, lineHeight: 14, textAlign: 'center' },
 });
