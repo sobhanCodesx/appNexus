@@ -55,6 +55,7 @@ export default function ProfileScreen() {
         title="Player Hub"
         subtitle="YOUR PLAYNEXUS ID"
         avatarUrl={user?.avatar_url}
+        showStories={false}
       />
 
       <ScrollView

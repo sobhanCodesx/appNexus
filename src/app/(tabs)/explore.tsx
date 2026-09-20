@@ -6,6 +6,7 @@ import { useMemo, useState } from 'react';
 import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 import { ExpandableText } from '@/components/ui/expandable-text';
+import { StoryTray } from '@/components/stories/story-tray';
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { Screen } from '@/components/ui/screen';
 import { SkeletonBox } from '@/components/ui/skeleton';
@@ -90,6 +91,8 @@ export default function ExploreScreen() {
           <View style={styles.searchHandle} />
         </PressableScale>
       </View>
+
+      <StoryTray />
 
       <View style={styles.switcher}>
         <PressableScale

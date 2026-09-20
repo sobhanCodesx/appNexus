@@ -2,7 +2,7 @@ import { FlashList } from '@shopify/flash-list';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ExpandableText } from '@/components/ui/expandable-text';
@@ -53,11 +53,6 @@ export default function FeedScreen() {
   );
   const trending = useApiResource<{ games: TrendingGame[] }>('/feed/trending', { games: [] }, 30_000);
 
-  const stories = useMemo(
-    () => (feed.data.data || []).filter((item) => Boolean(mediaOf(item))).slice(0, 10),
-    [feed.data.data],
-  );
-
   return (
     <Screen>
       <PageHeader title="Feed" subtitle="PLAYNEXUS SIGNAL" onSearch={() => router.push('/search')} />
@@ -66,10 +61,6 @@ export default function FeedScreen() {
         <Text style={styles.kicker}>YOUR GAMING PULSE</Text>
         <Text style={styles.heading}>همه‌چیز مهم، بدون شلوغی</Text>
       </View>
-
-      {stories.length || feed.loading ? (
-        <StoryRail items={stories} loading={feed.loading && !stories.length} />
-      ) : null}
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
         <Chip label="برای تو" active={mode === 'for-you'} onPress={() => setMode('for-you')} />
@@ -106,48 +97,6 @@ export default function FeedScreen() {
         />
       )}
     </Screen>
-  );
-}
-
-function StoryRail({ items, loading }: { items: FeedItem[]; loading: boolean }) {
-  return (
-    <View style={styles.storySection}>
-      <View style={styles.storyHeader}>
-        <Text style={styles.storyAction}>SWIPE STORIES</Text>
-        <View style={styles.storyHeaderCopy}>
-          <Text style={styles.storyEyebrow}>NEXUS STORIES</Text>
-          <Text style={styles.storyTitle}>استوری‌ها</Text>
-        </View>
-      </View>
-
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.storyRail}>
-        {loading
-          ? Array.from({ length: 6 }).map((_, index) => (
-              <View key={index} style={styles.storyItem}>
-                <SkeletonBox style={styles.storySkeleton} radius={26} />
-                <SkeletonBox style={styles.storyLabelSkeleton} radius={6} />
-              </View>
-            ))
-          : items.map((item, index) => {
-              const uri = mediaOf(item);
-              return (
-                <PressableScale
-                  key={item.id}
-                  onPress={() => router.push({ pathname: '/stories', params: { start: slugOf(item) } })}
-                  style={styles.storyItem}>
-                  <LinearGradient
-                    colors={index % 3 === 0 ? [palette.cyan, palette.blueHot, palette.violet] : [palette.violet, palette.magenta, palette.cyan]}
-                    style={styles.storyRing}>
-                    <View style={styles.storyInner}>
-                      <Image source={uri ? { uri } : fallback} style={styles.storyImage} contentFit="cover" />
-                    </View>
-                  </LinearGradient>
-                  <Text numberOfLines={1} style={styles.storyLabel}>{item.author?.name || item.channel?.name || 'PlayNexus'}</Text>
-                </PressableScale>
-              );
-            })}
-      </ScrollView>
-    </View>
   );
 }
 
@@ -266,20 +215,6 @@ const styles = StyleSheet.create({
   topCopy: { paddingHorizontal: layout.screenPadding, paddingBottom: spacing.lg, alignItems: 'flex-end' },
   kicker: { color: palette.cyan, fontFamily: fontFamily.black, fontSize: 8, letterSpacing: 1.15 },
   heading: { color: palette.white, fontFamily: fontFamily.black, fontWeight: fontWeight.black, fontSize: 27, marginTop: 4 },
-  storySection: { paddingBottom: spacing.md },
-  storyHeader: { paddingHorizontal: layout.screenPadding, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: spacing.sm },
-  storyHeaderCopy: { alignItems: 'flex-end' },
-  storyEyebrow: { color: palette.magenta, fontFamily: fontFamily.black, fontSize: 7, letterSpacing: 1 },
-  storyTitle: { color: palette.white, fontFamily: fontFamily.black, fontSize: 18, marginTop: 2 },
-  storyAction: { color: palette.textDim, fontFamily: fontFamily.black, fontSize: 7, letterSpacing: 0.8 },
-  storyRail: { paddingHorizontal: layout.screenPadding, gap: 12 },
-  storyItem: { width: 72, alignItems: 'center' },
-  storyRing: { width: 66, height: 66, borderRadius: 24, padding: 2.2 },
-  storyInner: { flex: 1, borderRadius: 22, padding: 2, backgroundColor: palette.ink },
-  storyImage: { flex: 1, borderRadius: 20 },
-  storyLabel: { width: 70, color: palette.textMuted, fontFamily: fontFamily.medium, fontSize: 9, textAlign: 'center', marginTop: 6 },
-  storySkeleton: { width: 66, height: 66 },
-  storyLabelSkeleton: { width: 48, height: 8, marginTop: 7 },
   filters: { gap: spacing.xs, paddingHorizontal: layout.screenPadding, paddingBottom: spacing.md },
   content: { paddingHorizontal: layout.screenPadding, paddingBottom: 110 },
   feedCard: { marginBottom: spacing.lg, borderRadius: radii.xxl, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'rgba(10,16,26,0.72)', overflow: 'hidden', ...shadow.soft },

@@ -5,20 +5,24 @@ import { StyleSheet, Text, View } from 'react-native';
 import { fontFamily, fontWeight, layout, palette, shadow, spacing, typeScale } from '@/design';
 import { LivePulse } from './motion-primitives';
 import { PressableScale } from './pressable-scale';
+import { StoryTray } from '@/components/stories/story-tray';
 
 export function PageHeader({
   title,
   subtitle,
   onSearch,
   avatarUrl,
+  showStories = true,
 }: {
   title: string;
   subtitle?: string;
   onSearch?: () => void;
   avatarUrl?: string | null;
+  showStories?: boolean;
 }) {
   return (
-    <View style={styles.root}>
+    <View>
+      <View style={styles.root}>
       <View style={styles.leading}>
         {avatarUrl ? (
           <View style={styles.avatarHalo}>
@@ -47,6 +51,8 @@ export function PageHeader({
         </View>
         <Text style={styles.title}>{title}</Text>
       </View>
+      </View>
+      {showStories ? <StoryTray /> : null}
     </View>
   );
 }
