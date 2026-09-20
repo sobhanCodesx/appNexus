@@ -71,8 +71,8 @@ export function QuickPortal({
 
 const styles = StyleSheet.create({
   root: {
-    width: 154,
-    minHeight: 98,
+    width: 142,
+    minHeight: 88,
     borderRadius: radii.xl,
     borderWidth: 1,
     borderColor: palette.line,
@@ -91,8 +91,8 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 2,
   },
   symbolWrap: {
-    width: 34,
-    height: 34,
+    width: 32,
+    height: 32,
     borderRadius: 12,
     borderWidth: 1,
     backgroundColor: 'rgba(255,255,255,0.035)',
