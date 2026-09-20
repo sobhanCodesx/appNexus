@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { fontFamily, palette, radii, shadow, spacing } from '@/design';
 import { nativeHrefFromUrl } from '@/services/native-navigation';
+import { requestNotificationStateRefresh } from '@/services/notification-state';
 import {
   configureNativeNotifications,
   notificationSummary,
@@ -91,6 +92,7 @@ export function InAppNotificationBanner() {
           const summary = notificationSummary(notification);
           invalidateResource('/notifications');
           invalidateResource('/me');
+          requestNotificationStateRefresh();
           show(summary);
         });
       })
