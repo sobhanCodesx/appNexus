@@ -3,7 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { PressableScale } from '@/components/ui/pressable-scale';
-import { fontWeight, palette, radii, shadow, spacing, typeScale } from '@/design';
+import { fontFamily, fontWeight, palette, radii, shadow, spacing, typeScale } from '@/design';
 import type { GameRadarItem } from '@/types/api';
 
 const fallbackImage = require('../../../assets/images/logo-glow.png');
@@ -30,6 +30,7 @@ export function RadarCard({
         contentFit="cover"
         recyclingKey={String(item.id)}
         transition={180}
+        cachePolicy="memory-disk"
       />
 
       <LinearGradient
@@ -141,6 +142,7 @@ const styles = StyleSheet.create({
   signalText: {
     color: palette.white,
     fontSize: 8,
+    fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
     letterSpacing: 1,
   },
@@ -161,6 +163,7 @@ const styles = StyleSheet.create({
   platformText: {
     color: palette.text,
     fontSize: 8,
+    fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
   },
   copy: {
@@ -171,6 +174,7 @@ const styles = StyleSheet.create({
   eyebrow: {
     color: palette.cyan,
     fontSize: 8,
+    fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
     letterSpacing: 1,
     marginBottom: 6,
@@ -179,6 +183,7 @@ const styles = StyleSheet.create({
     color: palette.white,
     fontSize: typeScale.title,
     lineHeight: 30,
+    fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
     textAlign: 'right',
   },
@@ -192,6 +197,7 @@ const styles = StyleSheet.create({
   subtitle: {
     color: palette.textMuted,
     fontSize: typeScale.caption,
+    fontFamily: fontFamily.medium,
     fontWeight: fontWeight.medium,
   },
   arrowOrb: {
