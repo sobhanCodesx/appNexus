@@ -12,7 +12,6 @@ import Animated, {
 import { PressableScale } from '@/components/ui/pressable-scale';
 import {
   fontWeight,
-  gradients,
   palette,
   radii,
   shadow,
