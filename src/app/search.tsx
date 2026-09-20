@@ -1,4 +1,5 @@
 import { FlashList } from '@shopify/flash-list';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -71,7 +72,15 @@ export default function SearchScreen() {
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => {
           if (item.type === 'content') {
-            return <View style={styles.cardRow}><ContentCard item={item.data} width="100%" /></View>;
+            return (
+              <View style={styles.cardRow}>
+                <ContentCard
+                  item={item.data}
+                  width="100%"
+                  onPress={() => router.push({ pathname: '/content/[slug]', params: { slug: item.data.slug } })}
+                />
+              </View>
+            );
           }
 
           const title = String(item.data.name || item.data.title || 'PlayNexus');
