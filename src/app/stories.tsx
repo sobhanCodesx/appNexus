@@ -287,6 +287,7 @@ function StoryVideo({
   });
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/immutability
     player.muted = muted;
   }, [muted, player]);
 

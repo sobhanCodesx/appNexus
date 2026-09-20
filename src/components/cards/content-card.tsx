@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { PressableScale } from '@/components/ui/pressable-scale';
@@ -12,11 +12,11 @@ const fallbackImage = require('../../../assets/images/logo-glow.png');
 
 function imageOf(item: ContentItem) {
   const raw = item as ContentItem & {
-    media?: Array<{
+    media?: {
       type?: string | null;
       url?: string | null;
       thumbnail?: string | null;
-    }>;
+    }[];
   };
   const mediaImage = raw.media?.find((media) => media.thumbnail)?.thumbnail
     || raw.media?.find((media) => media.type === 'image' && media.url)?.url;
@@ -45,6 +45,7 @@ export function ContentCard({
 }) {
   const duration = item.duration ? Math.max(1, Math.round(item.duration / 60)) : null;
   const previewTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const releaseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const consumedPreview = useRef(false);
   const [touchPreview, setTouchPreview] = useState(false);
   const hasPreview = item.type === 'video' && Boolean(videoPreviewUrl(item));
@@ -56,6 +57,11 @@ export function ContentCard({
       previewTimer.current = null;
     }
   };
+
+  useEffect(() => () => {
+    clearPreviewTimer();
+    if (releaseTimer.current) clearTimeout(releaseTimer.current);
+  }, []);
 
   return (
     <PressableScale
@@ -78,7 +84,8 @@ export function ContentCard({
       onPressOut={() => {
         clearPreviewTimer();
         if (touchPreview && !previewActive) {
-          setTimeout(() => setTouchPreview(false), 120);
+          if (releaseTimer.current) clearTimeout(releaseTimer.current);
+          releaseTimer.current = setTimeout(() => setTouchPreview(false), 120);
         }
       }}
       pressedScale={0.982}
