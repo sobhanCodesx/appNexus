@@ -82,6 +82,7 @@ export type VideoPlaylistContext = {
   id: number;
   title: string;
   slug: string;
+  image_url?: ImageUrl;
   channel_name?: string | null;
   is_public?: boolean;
   current_id?: number;
