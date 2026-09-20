@@ -712,14 +712,38 @@ function PlayerRoundButton({
 function PlaylistPanel({ playlist }: { playlist: VideoPlaylistContext }) {
   const items = playlist.items || [];
   const [open, setOpen] = useState(false);
+  const collectionImage = playlist.image_url || items[0]?.thumbnail_url || items[0]?.image_url || items[0]?.cover_url || null;
   const currentIndex = Math.max(0, items.findIndex((item) => item.id === playlist.current_id));
 
   return (
     <View style={styles.playlistPanel}>
-      <LinearGradient
-        colors={['rgba(88,244,255,0.065)', 'rgba(167,123,255,0.035)', 'rgba(255,255,255,0.018)']}
-        style={StyleSheet.absoluteFill}
-      />
+      {collectionImage ? (
+        <View pointerEvents="none" style={styles.playlistBackdrop}>
+          <Image
+            source={{ uri: String(collectionImage) }}
+            style={StyleSheet.absoluteFill}
+            contentFit="cover"
+          />
+          <BlurView intensity={18} tint="dark" style={StyleSheet.absoluteFill} />
+          <LinearGradient
+            colors={[
+              'rgba(4,7,12,0.30)',
+              'rgba(4,7,12,0.56)',
+              'rgba(4,7,12,0.88)',
+              'rgba(4,7,12,0.96)',
+            ]}
+            locations={[0, 0.28, 0.66, 1]}
+            start={{ x: 0, y: 0.2 }}
+            end={{ x: 1, y: 0.8 }}
+            style={StyleSheet.absoluteFill}
+          />
+        </View>
+      ) : (
+        <LinearGradient
+          colors={['rgba(88,244,255,0.065)', 'rgba(167,123,255,0.035)', 'rgba(255,255,255,0.018)']}
+          style={StyleSheet.absoluteFill}
+        />
+      )}
       <PressableScale
         onPress={() => setOpen((value) => !value)}
         style={styles.playlistHeader}>
@@ -1446,7 +1470,8 @@ const styles = StyleSheet.create({
   actionLabel: { color: palette.text, fontFamily: fontFamily.black, fontSize: 9 },
   actionLabelActive: { color: palette.white },
   actionValue: { color: palette.textDim, fontFamily: fontFamily.medium, fontSize: 8 },
-  playlistPanel: { marginTop: spacing.xxxl, borderRadius: radii.xxl, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(88,244,255,0.12)', backgroundColor: 'rgba(10,16,26,0.74)', padding: spacing.sm, ...shadow.soft },
+  playlistPanel: { marginTop: spacing.xxxl, borderRadius: radii.xxl, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(88,244,255,0.16)', backgroundColor: 'rgba(10,16,26,0.82)', padding: spacing.sm, ...shadow.soft },
+  playlistBackdrop: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, opacity: 0.92 },
   playlistHeader: { minHeight: 90, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.xs },
   playlistArrow: { width: 8, height: 8, borderLeftWidth: 1.4, borderBottomWidth: 1.4, borderColor: palette.cyan, transform: [{ rotate: '45deg' }] },
   playlistHeaderCopy: { flex: 1, alignItems: 'flex-end' },
