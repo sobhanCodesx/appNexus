@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { fontFamily, fontWeight, palette, spacing } from '@/design';
@@ -24,6 +24,7 @@ type StoryBubble = {
 };
 
 const fallback = require('../../../assets/images/logo-glow.png');
+const sessionSeenStories = new Set<string>();
 
 function slugOf(item: StoryItem) {
   return item.slug || item.feed_slug || String(item.id);
@@ -67,6 +68,7 @@ function nameOf(item: StoryItem) {
 
 export function StoryTray() {
   const stories = usePaginatedResource<StoryItem>('/feed?tab=for-you&per_page=18', 45_000);
+  const [, setSeenVersion] = useState(0);
 
   const bubbles = useMemo<StoryBubble[]>(() => {
     const seen = new Set<string>();
@@ -104,33 +106,48 @@ export function StoryTray() {
                 <View style={styles.skeletonLabel} />
               </View>
             ))
-          : bubbles.map((story) => (
-              <PressableScale
-                key={story.key}
-                haptic
-                pressedScale={0.96}
-                onPress={() => router.push({
-                  pathname: '/stories',
-                  params: { start: story.slug },
-                })}
-                style={styles.bubble}>
-                <LinearGradient
-                  colors={[palette.warning, palette.magenta, palette.violet]}
-                  start={{ x: 0, y: 1 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.ring}>
-                  <View style={styles.ringInner}>
-                    <Image
-                      source={story.avatar ? { uri: String(story.avatar) } : fallback}
-                      style={styles.avatar}
-                      contentFit="cover"
-                      cachePolicy="memory-disk"
-                    />
-                  </View>
-                </LinearGradient>
-                <Text numberOfLines={1} style={styles.label}>{story.name}</Text>
-              </PressableScale>
-            ))}
+          : bubbles.map((story) => {
+              const seen = sessionSeenStories.has(story.key);
+              const avatar = (
+                <View style={styles.ringInner}>
+                  <Image
+                    source={story.avatar ? { uri: String(story.avatar) } : fallback}
+                    style={styles.avatar}
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
+                  />
+                </View>
+              );
+
+              return (
+                <PressableScale
+                  key={story.key}
+                  haptic
+                  pressedScale={0.96}
+                  onPress={() => {
+                    sessionSeenStories.add(story.key);
+                    setSeenVersion((value) => value + 1);
+                    router.push({
+                      pathname: '/stories',
+                      params: { start: story.slug },
+                    });
+                  }}
+                  style={styles.bubble}>
+                  {seen ? (
+                    <View style={styles.seenRing}>{avatar}</View>
+                  ) : (
+                    <LinearGradient
+                      colors={[palette.warning, palette.magenta, palette.violet]}
+                      start={{ x: 0, y: 1 }}
+                      end={{ x: 1, y: 0 }}
+                      style={styles.ring}>
+                      {avatar}
+                    </LinearGradient>
+                  )}
+                  <Text numberOfLines={1} style={[styles.label, seen && styles.labelSeen]}>{story.name}</Text>
+                </PressableScale>
+              );
+            })}
       </ScrollView>
     </View>
   );
@@ -154,6 +171,13 @@ const styles = StyleSheet.create({
     borderRadius: 66,
     padding: 2.2,
   },
+  seenRing: {
+    width: 66,
+    height: 66,
+    borderRadius: 66,
+    padding: 2.2,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+  },
   ringInner: {
     flex: 1,
     borderRadius: 64,
@@ -174,6 +198,9 @@ const styles = StyleSheet.create({
     fontSize: 9,
     lineHeight: 13,
     textAlign: 'center',
+  },
+  labelSeen: {
+    color: palette.textMuted,
   },
   skeletonRing: {
     width: 66,

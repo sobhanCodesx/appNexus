@@ -229,23 +229,10 @@ export default function StoriesScreen() {
           accessibilityLabel="استوری بعدی"
         />
 
-        <View pointerEvents="box-none" style={styles.bottom}>
-          {caption ? (
-            <Text numberOfLines={2} style={styles.caption}>{caption}</Text>
-          ) : (
-            <Text numberOfLines={2} style={styles.caption}>{item.title}</Text>
-          )}
-
-          <PressableScale
-            haptic
-            pressedScale={0.97}
-            onPress={() => router.push({
-              pathname: '/content/[slug]',
-              params: { slug: slugOf(item) },
-            })}
-            style={styles.openPost}>
-            <Text style={styles.openPostText}>مشاهده پست</Text>
-          </PressableScale>
+        <View pointerEvents="none" style={styles.bottom}>
+          <Text numberOfLines={2} style={styles.caption}>
+            {caption || item.title}
+          </Text>
         </View>
       </View>
     </Screen>
@@ -390,22 +377,6 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 5,
     marginBottom: spacing.sm,
-  },
-  openPost: {
-    minHeight: 42,
-    paddingHorizontal: 18,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.40)',
-    backgroundColor: 'rgba(0,0,0,0.24)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  openPostText: {
-    color: palette.white,
-    fontFamily: fontFamily.bold,
-    fontWeight: fontWeight.bold,
-    fontSize: 10,
   },
   loading: {
     flex: 1,
