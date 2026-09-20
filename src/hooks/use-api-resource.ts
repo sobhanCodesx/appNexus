@@ -21,7 +21,6 @@ export function useApiResource<T>(path: string, initialData: T, ttl = 30_000) {
     let active = true;
 
     if (isResourceFresh(path, ttl)) {
-      setLoading(false);
       return () => {
         active = false;
       };
