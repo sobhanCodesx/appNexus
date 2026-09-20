@@ -9,6 +9,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 
+import { LivePulse } from '@/components/ui/motion-primitives';
 import { PressableScale } from '@/components/ui/pressable-scale';
 import {
   fontWeight,
@@ -105,9 +106,7 @@ export function HeroSpotlight({
             </View>
 
             <View style={styles.liveBadge}>
-              <View style={styles.livePulseOuter}>
-                <View style={styles.livePulse} />
-              </View>
+              <LivePulse size={5} color={palette.cyan} />
               <Text style={styles.liveText}>NEXUS LIVE</Text>
             </View>
           </View>
@@ -137,7 +136,9 @@ export function HeroSpotlight({
               </View>
 
               <View style={styles.cta}>
-                <Text style={styles.ctaText}>بازش کن</Text>
+                <Text style={styles.ctaText}>
+                  {onPress ? slide?.button_label || 'بازش کن' : 'ویژه امروز'}
+                </Text>
                 <View style={styles.ctaOrb}>
                   <View style={styles.arrow} />
                 </View>
