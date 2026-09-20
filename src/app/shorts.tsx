@@ -203,10 +203,11 @@ function ShortAction({
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: palette.black },
   short: { width: '100%', backgroundColor: palette.black },
-  missingVideo: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
+  missingVideo: { position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center' },
   missingText: { color: palette.textMuted },
   scrim: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    inset: 0,
     backgroundColor: 'rgba(0,0,0,0.10)',
   },
   topBar: {
