@@ -21,7 +21,8 @@ import {
   typeScale,
 } from '@/design';
 import { useApiResource } from '@/hooks/use-api-resource';
-import type { HomePayload } from '@/types/api';
+import { nativeHrefFromUrl } from '@/services/native-navigation';
+import type { HomePayload, HomeSlide } from '@/types/api';
 
 type Section = 'hero' | 'pulse' | 'portals' | 'feed' | 'radar' | 'studios';
 
@@ -46,6 +47,42 @@ export default function HomeScreen() {
   const intelligence = data.personalized_home?.intelligence;
   const followedGames = data.personalized_home?.followed_games || [];
 
+  const primarySlide = data.slides?.[0];
+  const heroContent = primarySlide ? undefined : feedItems[0];
+  const heroSlide: HomeSlide | undefined = primarySlide ?? (heroContent
+    ? {
+        id: heroContent.id,
+        title: heroContent.title,
+        eyebrow: heroContent.game?.name
+          || heroContent.channel?.name
+          || 'FEATURED NOW',
+        description: heroContent.excerpt,
+        mobile_image_url: heroContent.thumbnail_url
+          || heroContent.image_url
+          || heroContent.cover_url
+          || heroContent.game?.cover_url,
+      }
+    : undefined);
+
+  const feedItems = heroContent && feedItems.length > 1
+    ? feed.slice(1)
+    : feed;
+
+  const openHero = () => {
+    if (primarySlide?.button_url) {
+      const href = nativeHrefFromUrl(primarySlide.button_url);
+      if (href) router.push(href);
+      return;
+    }
+
+    if (heroContent) {
+      router.push({
+        pathname: '/content/[slug]',
+        params: { slug: heroContent.slug },
+      });
+    }
+  };
+
   return (
     <Screen edges={['top', 'left', 'right']}>
       <PageHeader
@@ -60,7 +97,10 @@ export default function HomeScreen() {
           if (item === 'hero') {
             return (
               <View style={styles.heroSection}>
-                <HeroSpotlight slide={data.slides?.[0]} />
+                <HeroSpotlight
+                  slide={heroSlide}
+                  onPress={heroSlide ? openHero : undefined}
+                />
               </View>
             );
           }
@@ -134,26 +174,26 @@ export default function HomeScreen() {
                   />
                 </View>
 
-                {feed.length ? (
+                {feedItems.length ? (
                   <>
                     <View style={styles.featuredWrap}>
                       <ContentCard
-                        item={feed[0]}
+                        item={feedItems[0]}
                         featured
                         width="100%"
                         onPress={() => router.push({
                           pathname: '/content/[slug]',
-                          params: { slug: feed[0].slug },
+                          params: { slug: feedItems[0].slug },
                         })}
                       />
                     </View>
 
-                    {feed.length > 1 ? (
+                    {feedItems.length > 1 ? (
                       <ScrollView
                         horizontal
                         showsHorizontalScrollIndicator={false}
                         contentContainerStyle={styles.horizontalRow}>
-                        {feed.slice(1, 9).map((content) => (
+                        {feedItems.slice(1, 9).map((content) => (
                           <ContentCard
                             key={content.id}
                             item={content}
@@ -301,10 +341,10 @@ const styles = StyleSheet.create({
     paddingBottom: 132,
   },
   heroSection: {
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
   },
   section: {
-    marginBottom: spacing.xxxl,
+    marginBottom: spacing.xxl,
   },
   lastSection: {
     marginBottom: spacing.massive,
@@ -315,11 +355,11 @@ const styles = StyleSheet.create({
   portalRail: {
     gap: spacing.sm,
     paddingHorizontal: layout.screenPadding,
-    paddingTop: spacing.md,
+    paddingTop: spacing.sm,
   },
   featuredWrap: {
     paddingHorizontal: layout.screenPadding,
-    paddingTop: spacing.md,
+    paddingTop: spacing.sm,
   },
   horizontalRow: {
     gap: spacing.md,
@@ -329,14 +369,14 @@ const styles = StyleSheet.create({
   studioRow: {
     gap: spacing.md,
     paddingHorizontal: layout.screenPadding,
-    paddingTop: spacing.lg,
+    paddingTop: spacing.md,
   },
   pulseWrap: {
     paddingHorizontal: layout.screenPadding,
-    marginBottom: spacing.xxxl,
+    marginBottom: spacing.xxl,
   },
   pulseCard: {
-    minHeight: 118,
+    minHeight: 102,
     borderRadius: radii.xl,
     borderWidth: 1,
     borderColor: 'rgba(88,244,255,0.12)',
@@ -349,15 +389,15 @@ const styles = StyleSheet.create({
     ...shadow.soft,
   },
   pulseOrb: {
-    width: 74,
-    height: 74,
+    width: 60,
+    height: 60,
     alignItems: 'center',
     justifyContent: 'center',
   },
   pulseRing: {
-    width: 58,
-    height: 58,
-    borderRadius: 58,
+    width: 48,
+    height: 48,
+    borderRadius: 48,
     borderWidth: 1,
     borderColor: 'rgba(88,244,255,0.22)',
     backgroundColor: 'rgba(88,244,255,0.035)',
@@ -365,9 +405,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   pulseCore: {
-    width: 14,
-    height: 14,
-    borderRadius: 5,
+    width: 12,
+    height: 12,
+    borderRadius: 4,
     backgroundColor: palette.cyan,
     transform: [{ rotate: '45deg' }],
     ...shadow.cyanGlow,
@@ -396,7 +436,7 @@ const styles = StyleSheet.create({
   pulseTitle: {
     color: palette.white,
     fontSize: typeScale.bodySm,
-    lineHeight: 22,
+    lineHeight: 20,
     fontWeight: fontWeight.bold,
     textAlign: 'right',
     marginTop: 6,
