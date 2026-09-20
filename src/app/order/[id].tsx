@@ -297,7 +297,7 @@ function OrderTimeline({ stage }: { stage: number }) {
       <View
         style={[
           styles.timelineLineActive,
-          { width: ((Math.max(1, stage) - 1) / 4 * 100) + '%' },
+          { width: ((((Math.max(1, stage) - 1) / 4) * 100) + '%') as `${number}%` },
         ]}
       />
     </View>
