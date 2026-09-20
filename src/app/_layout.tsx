@@ -15,14 +15,23 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ConnectivityBanner } from '@/components/system/connectivity-banner';
+import { InAppNotificationBanner } from '@/components/system/in-app-notification-banner';
 import { NavigationLoader } from '@/components/system/navigation-loader';
 import { palette } from '@/design';
 import { useNotificationNavigation } from '@/hooks/use-notification-navigation';
 import { getAppMeta } from '@/services/app-meta';
 import { getAccessToken } from '@/services/api';
-import { registerNativePushDevice } from '@/services/push';
+import { configureNativeNotifications } from '@/services/notifications';
+import {
+  registerNativePushDevice,
+  subscribeToNativePushTokenChanges,
+} from '@/services/push';
 
 void SplashScreen.preventAutoHideAsync();
+
+type RemovableSubscription = {
+  remove: () => void;
+};
 
 export default function RootLayout() {
   useNotificationNavigation();
@@ -36,13 +45,33 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
+    let disposed = false;
+    let pushTokenSubscription: RemovableSubscription | null = null;
+
     void getAppMeta().catch(() => undefined);
+    void configureNativeNotifications().catch(() => false);
+
+    void subscribeToNativePushTokenChanges()
+      .then((subscription) => {
+        if (disposed) {
+          subscription?.remove();
+          return;
+        }
+
+        pushTokenSubscription = subscription;
+      })
+      .catch(() => undefined);
 
     void (async () => {
       const token = await getAccessToken();
       if (!token) return;
       await registerNativePushDevice().catch(() => false);
     })();
+
+    return () => {
+      disposed = true;
+      pushTokenSubscription?.remove();
+    };
   }, []);
 
   useEffect(() => {
@@ -84,6 +113,7 @@ export default function RootLayout() {
         </Stack>
         <NavigationLoader />
         <ConnectivityBanner />
+        <InAppNotificationBanner />
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
