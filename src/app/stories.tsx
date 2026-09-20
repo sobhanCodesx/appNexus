@@ -3,6 +3,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { VideoView, useVideoPlayer } from 'expo-video';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Linking,
@@ -23,6 +24,7 @@ const fallback = require('../../assets/images/logo-glow.png');
 const IMAGE_DURATION = 5000;
 
 export default function StoriesScreen() {
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ start?: string }>();
   const start = Array.isArray(params.start) ? params.start[0] : params.start;
   const stories = usePaginatedResource<StorefrontStory>('/stories?per_page=24', 45_000);
@@ -183,22 +185,27 @@ export default function StoriesScreen() {
         <Pressable
           onPressIn={() => setHolding(true)}
           onPressOut={() => setHolding(false)}
-          onPress={previous}
-          style={styles.previousTap}
-          accessibilityLabel="استوری قبلی"
+          onPress={next}
+          style={styles.nextTap}
+          accessibilityLabel="استوری بعدی"
         />
         <Pressable
           onPressIn={() => setHolding(true)}
           onPressOut={() => setHolding(false)}
-          onPress={next}
-          style={styles.nextTap}
-          accessibilityLabel="استوری بعدی"
+          onPress={previous}
+          style={styles.previousTap}
+          accessibilityLabel="استوری قبلی"
         />
 
         <Text pointerEvents="none" style={styles.rightChevron}>›</Text>
         <Text pointerEvents="none" style={styles.leftChevron}>‹</Text>
 
-        <View pointerEvents="box-none" style={styles.bottom}>
+        <View
+          pointerEvents="box-none"
+          style={[
+            styles.bottom,
+            { bottom: Math.max(insets.bottom, 14) + 16 },
+          ]}>
           {item.excerpt ? (
             <View style={styles.captionBox}>
               <Text style={styles.caption}>{item.excerpt}</Text>
@@ -410,7 +417,7 @@ const styles = StyleSheet.create({
     fontSize: 29,
     lineHeight: 30,
   },
-  previousTap: {
+  nextTap: {
     position: 'absolute',
     zIndex: 20,
     top: 112,
@@ -418,7 +425,7 @@ const styles = StyleSheet.create({
     bottom: 100,
     width: '34%',
   },
-  nextTap: {
+  previousTap: {
     position: 'absolute',
     zIndex: 20,
     top: 112,
@@ -449,7 +456,6 @@ const styles = StyleSheet.create({
     zIndex: 30,
     left: 18,
     right: 18,
-    bottom: 26,
     gap: spacing.sm,
   },
   captionBox: {
@@ -466,7 +472,7 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   linkButton: {
-    minHeight: 46,
+    minHeight: 48,
     borderRadius: 18,
     backgroundColor: palette.white,
     flexDirection: 'row-reverse',
