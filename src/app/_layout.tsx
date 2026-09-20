@@ -6,6 +6,7 @@ import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { ConnectivityBanner } from '@/components/system/connectivity-banner';
 import { palette } from '@/design';
 import { useNotificationNavigation } from '@/hooks/use-notification-navigation';
 
@@ -33,6 +34,7 @@ export default function RootLayout() {
           <Stack.Screen name="search" />
           <Stack.Screen name="content/[slug]" />
         </Stack>
+        <ConnectivityBanner />
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
