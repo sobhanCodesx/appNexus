@@ -244,6 +244,17 @@ export default function OrderDetailScreen() {
           </>
         ) : null}
 
+        {order.status === 'delivered' ? (
+          <PressableScale
+            onPress={() => router.push({
+              pathname: '/invoice/[id]',
+              params: { id: String(order.id) },
+            })}
+            style={styles.invoiceButton}>
+            <Text style={styles.invoiceText}>مشاهده فاکتور کامل</Text>
+          </PressableScale>
+        ) : null}
+
         {order.status === 'pending' ? (
           <View style={styles.dangerSection}>
             <Text style={styles.dangerKicker}>ORDER CONTROL</Text>
@@ -693,6 +704,18 @@ const styles = StyleSheet.create({
     fontSize: typeScale.caption,
     fontWeight: fontWeight.bold,
     marginTop: 4,
+  },
+  invoiceButton: {
+    minHeight: 54,
+    marginTop: spacing.xxl,
+    borderRadius: radii.lg,
+    backgroundColor: palette.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  invoiceText: {
+    color: palette.ink,
+    fontWeight: fontWeight.black,
   },
   dangerSection: {
     marginTop: spacing.xxxl,
