@@ -71,14 +71,14 @@ export function QuickPortal({
 
 const styles = StyleSheet.create({
   root: {
-    width: 176,
-    minHeight: 112,
+    width: 154,
+    minHeight: 98,
     borderRadius: radii.xl,
     borderWidth: 1,
     borderColor: palette.line,
     backgroundColor: palette.glass,
     overflow: 'hidden',
-    padding: spacing.md,
+    padding: spacing.sm,
     ...shadow.soft,
   },
   signalLine: {
@@ -91,20 +91,20 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 2,
   },
   symbolWrap: {
-    width: 38,
-    height: 38,
-    borderRadius: 14,
+    width: 34,
+    height: 34,
+    borderRadius: 12,
     borderWidth: 1,
     backgroundColor: 'rgba(255,255,255,0.035)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   symbol: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: fontWeight.black,
   },
   copy: {
-    marginTop: spacing.md,
+    marginTop: spacing.sm,
     alignItems: 'flex-end',
   },
   title: {
@@ -121,8 +121,8 @@ const styles = StyleSheet.create({
   },
   arrowWrap: {
     position: 'absolute',
-    left: 14,
-    bottom: 14,
+    left: 12,
+    bottom: 12,
   },
   arrow: {
     width: 8,
