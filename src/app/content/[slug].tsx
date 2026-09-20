@@ -199,22 +199,25 @@ function NativeVideo({
           <Image source={{ uri: thumbnail }} style={StyleSheet.absoluteFill} contentFit="cover" blurRadius={32} />
           <BlurView intensity={68} tint="dark" style={StyleSheet.absoluteFill} />
           <LinearGradient
-            colors={['rgba(3,5,9,0.10)', 'rgba(3,5,9,0.58)', palette.ink]}
-            locations={[0, 0.62, 1]}
+            colors={['rgba(3,5,9,0.02)', 'rgba(3,5,9,0.48)', palette.ink]}
+            locations={[0, 0.58, 1]}
             style={StyleSheet.absoluteFill}
           />
+          <View style={styles.ambientHaloLeft} />
+          <View style={styles.ambientHaloRight} />
         </View>
       ) : null}
 
       <View style={styles.playerBrandRow}>
         <View style={styles.playerBrandPill}>
           <View style={styles.playerBrandDot} />
-          <Text style={styles.playerBrandText}>AMBIENT NEXUS PLAYER</Text>
+          <Text style={styles.playerBrandText}>PLAYNEXUS CINEMA</Text>
         </View>
-        <Text style={styles.playerHint}>PIP · FULLSCREEN</Text>
+        <Text style={styles.playerHint}>AMBIENT · PIP · FULLSCREEN</Text>
       </View>
 
       <View style={styles.videoFrame}>
+        <View pointerEvents="none" style={styles.frameGlow} />
         <VideoView
           player={player}
           style={styles.video}
@@ -250,12 +253,15 @@ function NativeVideo({
         <View style={[styles.paletteLine, { backgroundColor: palette.violet }]} />
         <View style={[styles.paletteLine, { backgroundColor: palette.magenta }]} />
       </View>
+      <Text style={styles.paletteCaption}>رنگ تصویر، فضای اطراف پلیر را زنده نگه می‌دارد</Text>
     </View>
   );
 }
 
 function PlaylistPanel({ playlist }: { playlist: VideoPlaylistContext }) {
   const items = playlist.items || [];
+  const [open, setOpen] = useState(false);
+  const currentIndex = Math.max(0, items.findIndex((item) => item.id === playlist.current_id));
 
   return (
     <View style={styles.playlistPanel}>
@@ -264,22 +270,24 @@ function PlaylistPanel({ playlist }: { playlist: VideoPlaylistContext }) {
         style={StyleSheet.absoluteFill}
       />
       <PressableScale
-        onPress={() => router.push({ pathname: '/collection/[slug]', params: { slug: playlist.slug } })}
+        onPress={() => setOpen((value) => !value)}
         style={styles.playlistHeader}>
         <View style={styles.playlistArrow} />
         <View style={styles.playlistHeaderCopy}>
           <Text style={styles.playlistKicker}>PLAYNEXUS COLLECTION</Text>
           <Text numberOfLines={1} style={styles.playlistTitle}>{playlist.title}</Text>
-          <Text style={styles.playlistMeta}>{playlist.channel_name || 'PlayNexus'} · {items.length.toLocaleString('fa-IR')} ویدیو</Text>
+          <Text style={styles.playlistMeta}>
+            {playlist.channel_name || 'PlayNexus'} · {(currentIndex + 1).toLocaleString('fa-IR')} / {items.length.toLocaleString('fa-IR')}
+          </Text>
         </View>
         <View style={styles.playlistStack}>
           <View style={styles.stackBack} />
-          <View style={styles.stackFront}><Text style={styles.stackCount}>{items.length.toLocaleString('fa-IR')}</Text></View>
+          <View style={styles.stackFront}><Text style={styles.stackCount}>{open ? '−' : '+'}</Text></View>
         </View>
       </PressableScale>
 
-      <View style={styles.playlistItems}>
-        {items.slice(0, 5).map((item, index) => {
+      {open ? <View style={styles.playlistItems}>
+        {items.slice(0, 7).map((item, index) => {
           const current = item.id === playlist.current_id;
           const thumbnail = item.thumbnail_url || item.image_url || item.cover_url || item.game?.cover_url;
           return (
@@ -306,9 +314,9 @@ function PlaylistPanel({ playlist }: { playlist: VideoPlaylistContext }) {
             </PressableScale>
           );
         })}
-      </View>
+      </View> : null}
 
-      {items.length > 5 ? (
+      {open && items.length > 7 ? (
         <PressableScale
           onPress={() => router.push({ pathname: '/collection/[slug]', params: { slug: playlist.slug } })}
           style={styles.playlistMore}>
@@ -377,31 +385,58 @@ function ChannelCard({
   const avatar = channel?.logo_url || channel?.avatar_url || fallbackChannel?.logo_url || fallbackChannel?.avatar_url;
   const name = channel?.name || fallbackChannel?.name || 'PlayNexus';
   const slug = channel?.slug || fallbackChannel?.slug;
+  const [subscribed, setSubscribed] = useState(Boolean(channel?.is_subscribed));
+  const [subscriberCount, setSubscriberCount] = useState(Number(channel?.subscribers_count || 0));
+
+  const subscribe = async () => {
+    if (!slug) return;
+    try {
+      const response = await apiRequest<{ subscribed: boolean; subscribers_count?: number }>(
+        '/channels/' + encodeURIComponent(slug) + '/subscription',
+        { method: 'POST' },
+      );
+      setSubscribed(response.subscribed);
+      if (typeof response.subscribers_count === 'number') {
+        setSubscriberCount(response.subscribers_count);
+      } else {
+        setSubscriberCount((count) => Math.max(0, count + (response.subscribed ? 1 : -1)));
+      }
+      void Haptics.selectionAsync();
+    } catch {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    }
+  };
 
   return (
-    <PressableScale
-      onPress={slug ? () => router.push({ pathname: '/channel/[slug]', params: { slug } }) : undefined}
-      style={styles.channelCard}>
-      <View style={styles.channelSignalBox}>
-        <Text style={styles.channelSignalText}>{type === 'video' ? 'WATCHING' : 'SOURCE'}</Text>
-        <View style={styles.channelSignalDot} />
-      </View>
+    <View style={styles.channelCard}>
+      <PressableScale
+        onPress={slug ? () => router.push({ pathname: '/channel/[slug]', params: { slug } }) : undefined}
+        style={styles.channelIdentity}>
+        {avatar ? (
+          <Image source={{ uri: String(avatar) }} style={styles.channelAvatar} contentFit="cover" />
+        ) : (
+          <View style={styles.channelFallback}><View style={styles.channelFallbackCore} /></View>
+        )}
+        <View style={styles.channelCopy}>
+          <Text style={styles.channelName}>{name}</Text>
+          <Text style={styles.channelMeta}>
+            {subscriberCount
+              ? subscriberCount.toLocaleString('fa-IR') + ' دنبال‌کننده'
+              : 'PlayNexus Gaming Channel'}
+          </Text>
+        </View>
+      </PressableScale>
 
-      <View style={styles.channelCopy}>
-        <Text style={styles.channelName}>{name}</Text>
-        <Text style={styles.channelMeta}>
-          {channel?.subscribers_count
-            ? channel.subscribers_count.toLocaleString('fa-IR') + ' دنبال‌کننده'
-            : 'PlayNexus Gaming Channel'}
-        </Text>
-      </View>
-
-      {avatar ? (
-        <Image source={{ uri: String(avatar) }} style={styles.channelAvatar} contentFit="cover" />
-      ) : (
-        <View style={styles.channelFallback}><View style={styles.channelFallbackCore} /></View>
-      )}
-    </PressableScale>
+      {slug && type === 'video' ? (
+        <PressableScale
+          onPress={() => void subscribe()}
+          style={[styles.subscribeButton, subscribed && styles.subscribeButtonActive]}>
+          <Text style={[styles.subscribeText, subscribed && styles.subscribeTextActive]}>
+            {subscribed ? 'دنبال می‌کنی' : 'دنبال کردن'}
+          </Text>
+        </PressableScale>
+      ) : null}
+    </View>
   );
 }
 
@@ -508,14 +543,17 @@ function DetailSkeleton() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   scrollContent: { paddingBottom: 28 },
-  playerWorld: { minHeight: 330, paddingTop: 102, paddingHorizontal: 12, paddingBottom: 24, backgroundColor: palette.black, overflow: 'hidden' },
-  ambient: { position: 'absolute', top: 48, left: -60, right: -60, height: 350, opacity: 0.72 },
+  playerWorld: { minHeight: 344, paddingTop: 104, paddingHorizontal: 10, paddingBottom: 18, backgroundColor: palette.black, overflow: 'hidden' },
+  ambient: { position: 'absolute', top: 34, left: -80, right: -80, height: 390, opacity: 0.92 },
+  ambientHaloLeft: { position: 'absolute', left: -20, top: 82, width: 170, height: 170, borderRadius: 170, backgroundColor: 'rgba(88,244,255,0.12)' },
+  ambientHaloRight: { position: 'absolute', right: -18, top: 112, width: 180, height: 180, borderRadius: 180, backgroundColor: 'rgba(255,85,213,0.10)' },
   playerBrandRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 2, marginBottom: 10 },
   playerBrandPill: { height: 27, paddingHorizontal: 9, borderRadius: radii.pill, backgroundColor: 'rgba(3,5,9,0.56)', borderWidth: 1, borderColor: 'rgba(88,244,255,0.14)', flexDirection: 'row', alignItems: 'center', gap: 6 },
   playerBrandDot: { width: 5, height: 5, borderRadius: 5, backgroundColor: palette.cyan, ...shadow.cyanGlow },
   playerBrandText: { color: palette.white, fontFamily: fontFamily.black, fontSize: 7, letterSpacing: 0.8 },
   playerHint: { color: 'rgba(255,255,255,0.42)', fontFamily: fontFamily.black, fontSize: 7, letterSpacing: 0.8 },
-  videoFrame: { width: '100%', aspectRatio: 16 / 9, borderRadius: 24, overflow: 'hidden', backgroundColor: palette.black, borderWidth: 1, borderColor: 'rgba(255,255,255,0.14)', ...shadow.card },
+  videoFrame: { width: '100%', aspectRatio: 16 / 9, borderRadius: 26, overflow: 'hidden', backgroundColor: palette.black, borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)', ...shadow.card },
+  frameGlow: { position: 'absolute', zIndex: 2, top: 0, right: 28, left: 28, height: 1, backgroundColor: 'rgba(88,244,255,0.72)' },
   video: { flex: 1 },
   poster: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, alignItems: 'center', justifyContent: 'center' },
   posterPlayOuter: { width: 78, height: 78, borderRadius: 30, backgroundColor: 'rgba(3,5,9,0.38)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.16)', alignItems: 'center', justifyContent: 'center' },
@@ -524,13 +562,14 @@ const styles = StyleSheet.create({
   posterBottom: { position: 'absolute', right: 14, bottom: 12, flexDirection: 'row-reverse', alignItems: 'center', gap: 7 },
   posterSignal: { width: 26, height: 2, borderRadius: 2, backgroundColor: palette.cyan },
   posterText: { color: palette.white, fontFamily: fontFamily.black, fontSize: 7, letterSpacing: 0.8 },
-  paletteRail: { height: 2, marginHorizontal: 20, marginTop: 10, flexDirection: 'row', borderRadius: 2, overflow: 'hidden', opacity: 0.72 },
+  paletteRail: { height: 3, marginHorizontal: 28, marginTop: 10, flexDirection: 'row', borderRadius: 3, overflow: 'hidden', opacity: 0.88 },
+  paletteCaption: { color: 'rgba(255,255,255,0.26)', fontFamily: fontFamily.medium, fontSize: 7, textAlign: 'center', marginTop: 5 },
   paletteLine: { flex: 1 },
   imageFrame: { width: '100%', height: 454, backgroundColor: palette.surface },
   topControls: { position: 'absolute', zIndex: 10, top: 54, left: layout.screenPadding, right: layout.screenPadding, flexDirection: 'row', justifyContent: 'space-between' },
   roundControl: { width: 46, height: 46, borderRadius: 17, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.14)', backgroundColor: 'rgba(3,5,9,0.54)', alignItems: 'center', justifyContent: 'center', ...shadow.soft },
   roundControlText: { color: palette.white, fontSize: 24, fontWeight: fontWeight.bold },
-  body: { flex: 1, marginTop: -30, borderTopLeftRadius: 32, borderTopRightRadius: 32, backgroundColor: palette.ink, paddingHorizontal: layout.screenPadding, paddingTop: spacing.xl, paddingBottom: 60 },
+  body: { flex: 1, marginTop: -30, borderTopLeftRadius: 32, borderTopRightRadius: 32, backgroundColor: palette.ink, paddingHorizontal: layout.screenPadding, paddingTop: spacing.xl, paddingBottom: 72 },
   videoBody: { marginTop: 0, borderTopLeftRadius: 0, borderTopRightRadius: 0 },
   storySignalRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 7, marginBottom: spacing.sm },
   storySignal: { width: 28, height: 2, borderRadius: 2, backgroundColor: palette.cyan },
@@ -539,9 +578,14 @@ const styles = StyleSheet.create({
   storyTypeVideo: { color: palette.magenta },
   storyMetaDivider: { width: 3, height: 3, borderRadius: 3, backgroundColor: palette.textDim },
   storyMeta: { color: palette.textDim, fontFamily: fontFamily.medium, fontSize: 9 },
-  title: { color: palette.white, fontFamily: fontFamily.black, fontSize: 32, lineHeight: 42, fontWeight: fontWeight.black, textAlign: 'right', letterSpacing: -0.6 },
+  title: { color: palette.white, fontFamily: fontFamily.black, fontSize: 27, lineHeight: 38, fontWeight: fontWeight.black, textAlign: 'right', letterSpacing: -0.5 },
   excerpt: { color: palette.textMuted, fontSize: 14, lineHeight: 26, marginTop: spacing.sm },
-  channelCard: { minHeight: 84, marginTop: spacing.xl, borderRadius: radii.xl, borderWidth: 1, borderColor: palette.line, backgroundColor: 'rgba(255,255,255,0.028)', padding: spacing.sm, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  channelCard: { minHeight: 78, marginTop: spacing.lg, borderRadius: radii.xl, borderWidth: 1, borderColor: palette.line, backgroundColor: 'rgba(255,255,255,0.032)', padding: spacing.sm, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  channelIdentity: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  subscribeButton: { minWidth: 92, height: 40, borderRadius: 14, backgroundColor: palette.white, alignItems: 'center', justifyContent: 'center' },
+  subscribeButtonActive: { backgroundColor: 'rgba(255,255,255,0.07)', borderWidth: 1, borderColor: palette.line },
+  subscribeText: { color: palette.ink, fontFamily: fontFamily.black, fontSize: 9 },
+  subscribeTextActive: { color: palette.text },
   channelSignalBox: { minWidth: 70, height: 44, borderRadius: radii.md, backgroundColor: 'rgba(88,244,255,0.055)', borderWidth: 1, borderColor: 'rgba(88,244,255,0.14)', alignItems: 'center', justifyContent: 'center' },
   channelSignalText: { color: palette.cyan, fontFamily: fontFamily.black, fontSize: 7, letterSpacing: 0.8 },
   channelSignalDot: { width: 5, height: 5, borderRadius: 5, backgroundColor: palette.success, marginTop: 4 },
@@ -552,13 +596,13 @@ const styles = StyleSheet.create({
   channelFallback: { width: 54, height: 54, borderRadius: 18, borderWidth: 1, borderColor: 'rgba(88,244,255,0.18)', backgroundColor: 'rgba(24,124,255,0.08)', alignItems: 'center', justifyContent: 'center' },
   channelFallbackCore: { width: 15, height: 15, borderRadius: 5, backgroundColor: palette.cyan, transform: [{ rotate: '45deg' }] },
   actions: { gap: spacing.sm, marginTop: spacing.lg, paddingRight: 1 },
-  actionTile: { width: 92, minHeight: 80, borderRadius: radii.lg, borderWidth: 1, borderColor: palette.line, backgroundColor: 'rgba(255,255,255,0.028)', alignItems: 'center', justifyContent: 'center' },
+  actionTile: { minWidth: 92, minHeight: 48, paddingHorizontal: 13, borderRadius: radii.pill, borderWidth: 1, borderColor: palette.line, backgroundColor: 'rgba(255,255,255,0.035)', flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', gap: 6 },
   actionTileActive: { borderColor: 'rgba(88,244,255,0.26)', backgroundColor: 'rgba(88,244,255,0.075)', ...shadow.cyanGlow },
   actionSymbol: { color: palette.textMuted, fontSize: 19 },
   actionSymbolActive: { color: palette.cyan },
-  actionLabel: { color: palette.text, fontFamily: fontFamily.black, fontSize: 9, marginTop: 4 },
+  actionLabel: { color: palette.text, fontFamily: fontFamily.black, fontSize: 9 },
   actionLabelActive: { color: palette.white },
-  actionValue: { color: palette.textDim, fontFamily: fontFamily.medium, fontSize: 8, marginTop: 2 },
+  actionValue: { color: palette.textDim, fontFamily: fontFamily.medium, fontSize: 8 },
   playlistPanel: { marginTop: spacing.xxxl, borderRadius: radii.xxl, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(88,244,255,0.12)', backgroundColor: 'rgba(10,16,26,0.74)', padding: spacing.sm, ...shadow.soft },
   playlistHeader: { minHeight: 90, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.xs },
   playlistArrow: { width: 8, height: 8, borderLeftWidth: 1.4, borderBottomWidth: 1.4, borderColor: palette.cyan, transform: [{ rotate: '45deg' }] },
