@@ -403,7 +403,6 @@ const styles = StyleSheet.create({
   playerIdentity: {
     color: palette.textMuted,
     fontFamily: fontFamily.regular,
-    fontFamily: fontFamily.regular,
     fontSize: typeScale.caption,
     marginTop: 4,
     textAlign: 'right',
