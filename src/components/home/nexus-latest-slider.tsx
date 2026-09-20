@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 import { PressableScale } from '@/components/ui/pressable-scale';
@@ -9,6 +9,7 @@ import { fontFamily, fontWeight, palette, radii, shadow, spacing } from '@/desig
 import type { NexusLatestItem } from '@/types/api';
 
 const fallback = require('../../../assets/images/logo-glow.png');
+const AUTOPLAY_MS = 5200;
 
 const kindLabel: Record<NexusLatestItem['kind'], string> = {
   feed: 'FEED',
@@ -45,18 +46,44 @@ function open(item: NexusLatestItem) {
 export function NexusLatestSlider({ items }: { items: NexusLatestItem[] }) {
   const { width } = useWindowDimensions();
   const cardWidth = width - 32;
+  const scrollRef = useRef<ScrollView>(null);
   const [active, setActive] = useState(0);
+  const [interacting, setInteracting] = useState(false);
+
+  useEffect(() => {
+    if (items.length < 2 || interacting) return;
+
+    const timer = setInterval(() => {
+      setActive((current) => {
+        const next = (current + 1) % items.length;
+        scrollRef.current?.scrollTo({ x: next * cardWidth, animated: true });
+        return next;
+      });
+    }, AUTOPLAY_MS);
+
+    return () => clearInterval(timer);
+  }, [cardWidth, interacting, items.length]);
+
+  useEffect(() => {
+    if (active >= items.length) {
+      setActive(0);
+      scrollRef.current?.scrollTo({ x: 0, animated: false });
+    }
+  }, [active, items.length]);
 
   if (!items.length) return null;
 
   return (
     <View style={styles.root}>
       <ScrollView
+        ref={scrollRef}
         horizontal
         pagingEnabled
         decelerationRate="fast"
         snapToInterval={cardWidth}
         showsHorizontalScrollIndicator={false}
+        onScrollBeginDrag={() => setInteracting(true)}
+        onScrollEndDrag={() => setTimeout(() => setInteracting(false), 1800)}
         onMomentumScrollEnd={(event) => {
           const next = Math.round(event.nativeEvent.contentOffset.x / cardWidth);
           setActive(Math.max(0, Math.min(items.length - 1, next)));
@@ -109,6 +136,12 @@ export function NexusLatestSlider({ items }: { items: NexusLatestItem[] }) {
                 </View>
 
                 <View style={styles.signal} />
+                <View style={styles.autoplayTrack}>
+                  <View
+                    key={active === index ? 'active-' + index : 'idle-' + index}
+                    style={[styles.autoplayFill, active === index && styles.autoplayFillActive]}
+                  />
+                </View>
               </PressableScale>
             </View>
           );
@@ -117,8 +150,14 @@ export function NexusLatestSlider({ items }: { items: NexusLatestItem[] }) {
 
       <View style={styles.dots}>
         {items.map((item, index) => (
-          <View
+          <PressableScale
             key={item.key + '-dot'}
+            onPress={() => {
+              setInteracting(true);
+              setActive(index);
+              scrollRef.current?.scrollTo({ x: index * cardWidth, animated: true });
+              setTimeout(() => setInteracting(false), 2400);
+            }}
             style={[styles.dot, index === active && styles.dotActive]}
           />
         ))}
@@ -128,9 +167,7 @@ export function NexusLatestSlider({ items }: { items: NexusLatestItem[] }) {
 }
 
 const styles = StyleSheet.create({
-  root: {
-    marginBottom: spacing.xl,
-  },
+  root: { marginBottom: spacing.xl },
   card: {
     height: 356,
     borderRadius: radii.xxl,
@@ -140,135 +177,30 @@ const styles = StyleSheet.create({
     backgroundColor: palette.surface,
     ...shadow.card,
   },
-  media: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-    backgroundColor: palette.surface,
-  },
-  productMedia: {
-    backgroundColor: 'rgba(242,245,249,0.97)',
-  },
-  top: {
-    padding: spacing.md,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
+  media: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: palette.surface },
+  productMedia: { backgroundColor: 'rgba(242,245,249,0.97)' },
+  top: { padding: spacing.md, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   kindBadge: {
-    minHeight: 30,
-    paddingHorizontal: 10,
-    borderRadius: radii.pill,
-    backgroundColor: 'rgba(3,5,9,0.60)',
-    borderWidth: 1,
-    borderColor: 'rgba(88,244,255,0.17)',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+    minHeight: 30, paddingHorizontal: 10, borderRadius: radii.pill,
+    backgroundColor: 'rgba(3,5,9,0.60)', borderWidth: 1,
+    borderColor: 'rgba(88,244,255,0.17)', flexDirection: 'row', alignItems: 'center', gap: 6,
   },
-  kindDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 5,
-    backgroundColor: palette.cyan,
-  },
-  kindText: {
-    color: palette.white,
-    fontFamily: fontFamily.black,
-    fontWeight: fontWeight.black,
-    fontSize: 8,
-    letterSpacing: 1,
-  },
-  counter: {
-    color: 'rgba(255,255,255,0.78)',
-    fontFamily: fontFamily.black,
-    fontSize: 9,
-    letterSpacing: 1,
-  },
-  copy: {
-    marginTop: 'auto',
-    padding: spacing.lg,
-    alignItems: 'flex-end',
-  },
-  kicker: {
-    color: palette.cyan,
-    fontFamily: fontFamily.black,
-    fontWeight: fontWeight.black,
-    fontSize: 9,
-    letterSpacing: 1,
-  },
-  title: {
-    color: palette.white,
-    fontFamily: fontFamily.black,
-    fontWeight: fontWeight.black,
-    fontSize: 26,
-    lineHeight: 33,
-    textAlign: 'right',
-    marginTop: 6,
-    maxWidth: 330,
-  },
-  subtitle: {
-    color: 'rgba(245,248,252,0.68)',
-    fontFamily: fontFamily.regular,
-    fontSize: 12,
-    marginTop: 6,
-    textAlign: 'right',
-  },
-  footer: {
-    marginTop: spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  openText: {
-    color: palette.white,
-    fontFamily: fontFamily.bold,
-    fontSize: 11,
-  },
-  openOrb: {
-    width: 34,
-    height: 34,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.09)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.13)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  arrow: {
-    width: 7,
-    height: 7,
-    borderLeftWidth: 1.5,
-    borderBottomWidth: 1.5,
-    borderColor: palette.cyan,
-    transform: [{ rotate: '45deg' }],
-  },
-  signal: {
-    position: 'absolute',
-    bottom: 0,
-    right: 28,
-    width: 64,
-    height: 2,
-    backgroundColor: palette.cyan,
-  },
-  dots: {
-    minHeight: 22,
-    marginTop: spacing.sm,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 5,
-  },
-  dot: {
-    width: 5,
-    height: 5,
-    borderRadius: 5,
-    backgroundColor: 'rgba(255,255,255,0.16)',
-  },
-  dotActive: {
-    width: 20,
-    backgroundColor: palette.cyan,
-  },
+  kindDot: { width: 5, height: 5, borderRadius: 5, backgroundColor: palette.cyan },
+  kindText: { color: palette.white, fontFamily: fontFamily.black, fontWeight: fontWeight.black, fontSize: 8, letterSpacing: 1 },
+  counter: { color: 'rgba(255,255,255,0.78)', fontFamily: fontFamily.black, fontSize: 9, letterSpacing: 1 },
+  copy: { marginTop: 'auto', padding: spacing.lg, alignItems: 'flex-end' },
+  kicker: { color: palette.cyan, fontFamily: fontFamily.black, fontWeight: fontWeight.black, fontSize: 9, letterSpacing: 1 },
+  title: { color: palette.white, fontFamily: fontFamily.black, fontWeight: fontWeight.black, fontSize: 26, lineHeight: 33, textAlign: 'right', marginTop: 6, maxWidth: 330 },
+  subtitle: { color: 'rgba(245,248,252,0.68)', fontFamily: fontFamily.regular, fontSize: 12, marginTop: 6, textAlign: 'right' },
+  footer: { marginTop: spacing.md, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  openText: { color: palette.white, fontFamily: fontFamily.bold, fontSize: 11 },
+  openOrb: { width: 34, height: 34, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.09)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.13)', alignItems: 'center', justifyContent: 'center' },
+  arrow: { width: 7, height: 7, borderLeftWidth: 1.5, borderBottomWidth: 1.5, borderColor: palette.cyan, transform: [{ rotate: '45deg' }] },
+  signal: { position: 'absolute', bottom: 0, right: 28, width: 64, height: 2, backgroundColor: palette.cyan },
+  autoplayTrack: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 2, backgroundColor: 'rgba(255,255,255,0.05)' },
+  autoplayFill: { width: 0, height: 2, backgroundColor: palette.cyan },
+  autoplayFillActive: { width: '100%', opacity: 0.72 },
+  dots: { minHeight: 24, marginTop: spacing.sm, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 5 },
+  dot: { width: 7, height: 7, borderRadius: 7, backgroundColor: 'rgba(255,255,255,0.16)' },
+  dotActive: { width: 24, backgroundColor: palette.cyan },
 });
