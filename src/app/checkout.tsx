@@ -58,8 +58,20 @@ type Summary = {
   cashback_amount?: number;
 };
 
+type CheckoutAddress = {
+  recipient_name: string;
+  phone: string;
+  province: string;
+  city: string;
+  postal_code: string;
+  address_line: string;
+  plaque: string;
+  unit: string;
+};
+
 type Bootstrap = Summary & {
   addresses: Address[];
+  profile?: { name?: string | null; phone?: string | null };
   wallet_balance: number;
   available_exchanges?: {
     id: number;
@@ -91,6 +103,18 @@ export default function CheckoutScreen() {
   const [bootstrap, setBootstrap] = useState<Bootstrap | null>(null);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [addressId, setAddressId] = useState<number | null>(null);
+  const [addressMode, setAddressMode] = useState<'saved' | 'new'>('saved');
+  const [saveAddress, setSaveAddress] = useState(true);
+  const [newAddress, setNewAddress] = useState<CheckoutAddress>({
+    recipient_name: '',
+    phone: '',
+    province: 'تهران',
+    city: 'تهران',
+    postal_code: '',
+    address_line: '',
+    plaque: '',
+    unit: '',
+  });
   const [useWallet, setUseWallet] = useState(false);
   const [coupon, setCoupon] = useState('');
   const [exchangeId, setExchangeId] = useState<number | null>(null);
@@ -126,11 +150,17 @@ export default function CheckoutScreen() {
 
         setBootstrap(data);
         setSummary(data);
-        setAddressId(
+        const initialAddressId =
           data.addresses.find((item) => item.is_default)?.id
             ?? data.addresses[0]?.id
-            ?? null,
-        );
+            ?? null;
+        setAddressId(initialAddressId);
+        setAddressMode(initialAddressId ? 'saved' : 'new');
+        setNewAddress((current) => ({
+          ...current,
+          recipient_name: current.recipient_name || data.profile?.name || '',
+          phone: current.phone || data.profile?.phone || '',
+        }));
         setExchangeId(data.selected_exchange_id ?? null);
       } catch (value) {
         if (active) {
@@ -174,7 +204,16 @@ export default function CheckoutScreen() {
   };
 
   const placeOrder = async () => {
-    if (!addressId || !lines.length) return;
+    const newAddressReady =
+      newAddress.recipient_name.trim().length > 1
+      && newAddress.phone.trim().length > 5
+      && newAddress.address_line.trim().length > 4;
+
+    if (
+      !lines.length
+      || (addressMode === 'saved' && !addressId)
+      || (addressMode === 'new' && !newAddressReady)
+    ) return;
     setSubmitting(true);
     setError(null);
 
@@ -183,12 +222,20 @@ export default function CheckoutScreen() {
         method: 'POST',
         body: JSON.stringify({
           items: cartRequestItems(lines),
-          address_mode: 'saved',
-          address_id: addressId,
+          address_mode: addressMode,
+          address_id: addressMode === 'saved' ? addressId : null,
+          address: addressMode === 'new'
+            ? {
+                ...newAddress,
+                postal_code: newAddress.postal_code.trim() || null,
+                plaque: newAddress.plaque.trim() || null,
+                unit: newAddress.unit.trim() || null,
+              }
+            : null,
           coupon_code: coupon.trim() || null,
           use_wallet: useWallet,
           exchange_request_id: exchangeId,
-          save_address: false,
+          save_address: addressMode === 'new' ? saveAddress : false,
         }),
       });
 
@@ -216,7 +263,13 @@ export default function CheckoutScreen() {
   }
 
   const payable = summary?.payable_amount ?? summary?.grand_total;
-  const addressReady = Boolean(addressId);
+  const newAddressReady =
+    newAddress.recipient_name.trim().length > 1
+    && newAddress.phone.trim().length > 5
+    && newAddress.address_line.trim().length > 4;
+  const addressReady = addressMode === 'saved'
+    ? Boolean(addressId)
+    : newAddressReady;
   const creditReady = useWallet
     || Boolean(exchangeId)
     || Boolean(coupon.trim());
@@ -257,19 +310,20 @@ export default function CheckoutScreen() {
                 <PressableScale
                   key={address.id}
                   onPress={() => {
+                    setAddressMode('saved');
                     setAddressId(address.id);
                     void Haptics.selectionAsync();
                   }}
                   style={[
                     styles.address,
-                    selected && styles.addressSelected,
+                    addressMode === 'saved' && selected && styles.addressSelected,
                   ]}>
                   <View
                     style={[
                       styles.radio,
-                      selected && styles.radioSelected,
+                      addressMode === 'saved' && selected && styles.radioSelected,
                     ]}>
-                    {selected ? <View style={styles.radioCore} /> : null}
+                    {addressMode === 'saved' && selected ? <View style={styles.radioCore} /> : null}
                   </View>
 
                   <View style={styles.addressCopy}>
@@ -294,29 +348,109 @@ export default function CheckoutScreen() {
             })}
           </View>
 
-          {!bootstrap?.addresses?.length ? (
-            <View style={styles.warning}>
-              <View style={styles.warningIcon}>!</View>
-              <View style={styles.warningCopy}>
-                <Text style={styles.warningTitle}>آدرس لازم داریم</Text>
-                <Text style={styles.warningText}>
-                  قبل از ثبت سفارش، یک آدرس تحویل اضافه کن.
-                </Text>
-              </View>
-              <PressableScale
-                onPress={() => router.push('/addresses')}
-                style={styles.warningAction}>
-                <Text style={styles.warningActionText}>افزودن</Text>
-              </PressableScale>
-            </View>
-          ) : (
+          <View style={styles.addressActions}>
+            <PressableScale
+              onPress={() => {
+                setAddressMode('new');
+                void Haptics.selectionAsync();
+              }}
+              style={[
+                styles.newAddressButton,
+                addressMode === 'new' && styles.newAddressButtonActive,
+              ]}>
+              <Text style={[
+                styles.newAddressButtonText,
+                addressMode === 'new' && styles.newAddressButtonTextActive,
+              ]}>
+                + آدرس جدید در همین سفارش
+              </Text>
+            </PressableScale>
+
             <PressableScale
               haptic={false}
               onPress={() => router.push('/addresses')}
               style={styles.manageLink}>
               <Text style={styles.manageLinkText}>مدیریت آدرس‌ها</Text>
             </PressableScale>
-          )}
+          </View>
+
+          {addressMode === 'new' ? (
+            <View style={styles.inlineAddress}>
+              <View style={styles.inlineAddressSignal} />
+              <View style={styles.inlineHeading}>
+                <Text style={styles.inlineKicker}>NEW DELIVERY ADDRESS</Text>
+                <Text style={styles.inlineTitle}>آدرس همین سفارش</Text>
+                <Text style={styles.inlineHint}>ارسال فعلاً فقط داخل شهر تهران فعال است.</Text>
+              </View>
+
+              <CheckoutField
+                label="تحویل‌گیرنده"
+                value={newAddress.recipient_name}
+                onChange={(value) => setNewAddress((current) => ({ ...current, recipient_name: value }))}
+                placeholder="نام و نام خانوادگی"
+              />
+              <CheckoutField
+                label="شماره تماس"
+                value={newAddress.phone}
+                onChange={(value) => setNewAddress((current) => ({ ...current, phone: value }))}
+                placeholder="09xxxxxxxxx"
+                keyboardType="phone-pad"
+              />
+
+              <View style={styles.fixedCity}>
+                <Text style={styles.fixedCityValue}>تهران، تهران</Text>
+                <Text style={styles.fixedCityLabel}>محدوده ارسال</Text>
+              </View>
+
+              <CheckoutField
+                label="نشانی کامل"
+                value={newAddress.address_line}
+                onChange={(value) => setNewAddress((current) => ({ ...current, address_line: value }))}
+                placeholder="خیابان، کوچه، ساختمان…"
+                multiline
+              />
+
+              <View style={styles.inlineSplit}>
+                <View style={styles.inlineHalf}>
+                  <CheckoutField
+                    label="پلاک"
+                    value={newAddress.plaque}
+                    onChange={(value) => setNewAddress((current) => ({ ...current, plaque: value }))}
+                    placeholder="پلاک"
+                  />
+                </View>
+                <View style={styles.inlineHalf}>
+                  <CheckoutField
+                    label="واحد"
+                    value={newAddress.unit}
+                    onChange={(value) => setNewAddress((current) => ({ ...current, unit: value }))}
+                    placeholder="واحد"
+                  />
+                </View>
+              </View>
+
+              <CheckoutField
+                label="کدپستی"
+                value={newAddress.postal_code}
+                onChange={(value) => setNewAddress((current) => ({ ...current, postal_code: value.replace(/\D/g, '').slice(0, 10) }))}
+                placeholder="۱۰ رقم - اختیاری"
+                keyboardType="number-pad"
+              />
+
+              <View style={styles.saveAddressRow}>
+                <Switch
+                  value={saveAddress}
+                  onValueChange={setSaveAddress}
+                  trackColor={{ false: palette.surfaceBright, true: palette.blueHot }}
+                  thumbColor={palette.white}
+                />
+                <View style={styles.saveAddressCopy}>
+                  <Text style={styles.saveAddressTitle}>ذخیره برای خرید بعدی</Text>
+                  <Text style={styles.saveAddressText}>این آدرس به Address Book حساب اضافه می‌شه.</Text>
+                </View>
+              </View>
+            </View>
+          ) : null}
         </CheckoutSection>
 
         <CheckoutSection
@@ -506,11 +640,11 @@ export default function CheckoutScreen() {
         <View style={styles.dockSignal} />
 
         <PressableScale
-          disabled={submitting || !addressId}
+          disabled={submitting || !addressReady}
           onPress={() => void placeOrder()}
           style={[
             styles.place,
-            (!addressId || submitting) && styles.placeDisabled,
+            (!addressReady || submitting) && styles.placeDisabled,
           ]}>
           <Text style={styles.placeText}>
             {submitting ? 'در حال ثبت…' : 'ثبت نهایی سفارش'}
@@ -600,6 +734,41 @@ function CheckoutSection({
         </View>
       </View>
       {children}
+    </View>
+  );
+}
+
+function CheckoutField({
+  label,
+  value,
+  onChange,
+  placeholder,
+  multiline = false,
+  keyboardType,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  multiline?: boolean;
+  keyboardType?: 'default' | 'phone-pad' | 'number-pad';
+}) {
+  return (
+    <View style={styles.checkoutField}>
+      <Text style={styles.checkoutFieldLabel}>{label}</Text>
+      <TextInput
+        value={value}
+        onChangeText={onChange}
+        placeholder={placeholder}
+        placeholderTextColor={palette.textDim}
+        multiline={multiline}
+        keyboardType={keyboardType}
+        textAlign="right"
+        style={[
+          styles.checkoutFieldInput,
+          multiline && styles.checkoutFieldMultiline,
+        ]}
+      />
     </View>
   );
 }
@@ -963,6 +1132,149 @@ const styles = StyleSheet.create({
     color: palette.cyan,
     fontSize: typeScale.caption,
     fontWeight: fontWeight.bold,
+  },
+  addressActions: {
+    marginTop: spacing.sm,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  newAddressButton: {
+    minHeight: 42,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: 'rgba(88,244,255,0.14)',
+    backgroundColor: 'rgba(88,244,255,0.035)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  newAddressButtonActive: {
+    borderColor: 'rgba(88,244,255,0.28)',
+    backgroundColor: 'rgba(88,244,255,0.08)',
+  },
+  newAddressButtonText: {
+    color: palette.textMuted,
+    fontSize: typeScale.caption,
+    fontWeight: fontWeight.bold,
+  },
+  newAddressButtonTextActive: {
+    color: palette.cyan,
+  },
+  inlineAddress: {
+    marginTop: spacing.md,
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    borderColor: 'rgba(88,244,255,0.14)',
+    backgroundColor: 'rgba(88,244,255,0.035)',
+    padding: spacing.md,
+    overflow: 'hidden',
+    gap: spacing.sm,
+  },
+  inlineAddressSignal: {
+    position: 'absolute',
+    top: 0,
+    right: 22,
+    width: 52,
+    height: 2,
+    backgroundColor: palette.cyan,
+  },
+  inlineHeading: {
+    alignItems: 'flex-end',
+    marginBottom: spacing.xs,
+  },
+  inlineKicker: {
+    color: palette.cyan,
+    fontSize: 8,
+    fontWeight: fontWeight.black,
+    letterSpacing: 1,
+  },
+  inlineTitle: {
+    color: palette.white,
+    fontSize: typeScale.body,
+    fontWeight: fontWeight.black,
+    marginTop: 3,
+  },
+  inlineHint: {
+    color: palette.textMuted,
+    fontSize: 10,
+    marginTop: 3,
+  },
+  checkoutField: {
+    gap: 5,
+  },
+  checkoutFieldLabel: {
+    color: palette.textMuted,
+    fontSize: typeScale.caption,
+    fontWeight: fontWeight.bold,
+    textAlign: 'right',
+  },
+  checkoutFieldInput: {
+    minHeight: 52,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: palette.line,
+    backgroundColor: 'rgba(3,5,9,0.44)',
+    color: palette.white,
+    paddingHorizontal: spacing.md,
+  },
+  checkoutFieldMultiline: {
+    minHeight: 100,
+    paddingTop: spacing.md,
+    textAlignVertical: 'top',
+  },
+  fixedCity: {
+    minHeight: 54,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: 'rgba(80,232,176,0.14)',
+    backgroundColor: 'rgba(80,232,176,0.04)',
+    paddingHorizontal: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  fixedCityValue: {
+    color: palette.success,
+    fontWeight: fontWeight.black,
+  },
+  fixedCityLabel: {
+    color: palette.textMuted,
+    fontSize: typeScale.caption,
+  },
+  inlineSplit: {
+    flexDirection: 'row-reverse',
+    gap: spacing.sm,
+  },
+  inlineHalf: {
+    flex: 1,
+  },
+  saveAddressRow: {
+    minHeight: 68,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: palette.line,
+    backgroundColor: 'rgba(255,255,255,0.025)',
+    paddingHorizontal: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  saveAddressCopy: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  saveAddressTitle: {
+    color: palette.text,
+    fontSize: typeScale.bodySm,
+    fontWeight: fontWeight.black,
+  },
+  saveAddressText: {
+    color: palette.textMuted,
+    fontSize: 10,
+    marginTop: 2,
+    textAlign: 'right',
   },
   creditPanel: {
     borderRadius: radii.xl,
