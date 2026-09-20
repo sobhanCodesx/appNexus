@@ -8,6 +8,7 @@ import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { PageHeader } from '@/components/ui/page-header';
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { Screen } from '@/components/ui/screen';
+import { SkeletonBox } from '@/components/ui/skeleton';
 import { fontFamily, fontWeight, layout, palette, radii, shadow, spacing } from '@/design';
 import { usePaginatedResource } from '@/hooks/use-paginated-resource';
 
@@ -48,6 +49,7 @@ export default function GamesScreen() {
 
   const {
     data,
+    loading,
     refreshing,
     refresh,
     loadMore,
@@ -117,11 +119,19 @@ export default function GamesScreen() {
             : null
         }
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <View style={styles.emptyCloud}><View style={styles.emptyCore} /></View>
-            <Text style={styles.emptyTitle}>بازی‌ای پیدا نشد</Text>
-            <Text style={styles.emptyText}>عبارت جستجو رو عوض کن.</Text>
-          </View>
+          loading ? (
+            <View style={styles.gamesSkeleton}>
+              {Array.from({ length: 6 }).map((_, index) => (
+                <SkeletonBox key={index} style={styles.gameSkeleton} radius={24} />
+              ))}
+            </View>
+          ) : (
+            <View style={styles.empty}>
+              <View style={styles.emptyCloud}><View style={styles.emptyCore} /></View>
+              <Text style={styles.emptyTitle}>بازی‌ای پیدا نشد</Text>
+              <Text style={styles.emptyText}>عبارت جستجو رو عوض کن.</Text>
+            </View>
+          )
         }
       />
     </Screen>
@@ -468,6 +478,17 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1.2,
     borderColor: palette.cyan,
     transform: [{ rotate: '45deg' }],
+  },
+  gamesSkeleton: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    padding: 6,
+    gap: 8,
+  },
+  gameSkeleton: {
+    width: '47%',
+    height: 248,
   },
   loading: {
     paddingVertical: spacing.xl,
