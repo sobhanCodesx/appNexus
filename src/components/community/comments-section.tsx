@@ -3,8 +3,9 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { Chip } from '@/components/ui/chip';
 import { PressableScale } from '@/components/ui/pressable-scale';
-import { fontWeight, palette, radii, spacing, typeScale } from '@/design';
+import { fontFamily, fontWeight, palette, radii, spacing, typeScale } from '@/design';
 import { useApiResource } from '@/hooks/use-api-resource';
 import { ApiError, apiRequest } from '@/services/api';
 import { invalidateResource } from '@/services/resource-cache';
@@ -25,9 +26,12 @@ type Comment = {
 };
 
 export function CommentsSection({ slug, enabled = true }: { slug: string; enabled?: boolean }) {
-  const path = '/contents/' + encodeURIComponent(slug) + '/comments';
+  const [sort, setSort] = useState<'popular' | 'newest'>('popular');
+  const basePath = '/contents/' + encodeURIComponent(slug) + '/comments';
+  const path = basePath + '?sort=' + sort;
   const { data, refresh } = useApiResource<Paginated<Comment>>(path, { data: [] }, 15_000);
   const [body, setBody] = useState('');
+  const [replyTo, setReplyTo] = useState<Comment | null>(null);
   const [sending, setSending] = useState(false);
 
   if (!enabled) return null;
@@ -46,11 +50,16 @@ export function CommentsSection({ slug, enabled = true }: { slug: string; enable
     setSending(true);
 
     try {
-      await apiRequest(
-        '/contents/' + encodeURIComponent(slug) + '/comments',
-        { method: 'POST', body: JSON.stringify({ body: value }) },
-      );
+      await apiRequest(basePath, {
+        method: 'POST',
+        body: JSON.stringify({
+          body: value,
+          parent_id: replyTo?.id ?? null,
+        }),
+      });
       setBody('');
+      setReplyTo(null);
+      invalidateResource(basePath);
       invalidateResource(path);
       await refresh();
     } catch (error) {
@@ -63,6 +72,7 @@ export function CommentsSection({ slug, enabled = true }: { slug: string; enable
   const like = async (comment: Comment) => {
     try {
       await apiRequest('/comments/' + comment.id + '/like', { method: 'POST' });
+      invalidateResource(basePath);
       invalidateResource(path);
       await refresh();
     } catch (error) {
@@ -73,6 +83,7 @@ export function CommentsSection({ slug, enabled = true }: { slug: string; enable
   const remove = async (comment: Comment) => {
     try {
       await apiRequest('/comments/' + comment.id, { method: 'DELETE' });
+      invalidateResource(basePath);
       invalidateResource(path);
       await refresh();
     } catch (error) {
@@ -83,19 +94,34 @@ export function CommentsSection({ slug, enabled = true }: { slug: string; enable
   return (
     <View style={styles.root}>
       <View style={styles.header}>
-        <Text style={styles.count}>{(data.total ?? data.data.length).toLocaleString('fa-IR')}</Text>
-        <Text style={styles.title}>گفتگو</Text>
+        <View style={styles.sortRow}>
+          <Chip label="محبوب" active={sort === 'popular'} onPress={() => setSort('popular')} />
+          <Chip label="جدیدترین" active={sort === 'newest'} onPress={() => setSort('newest')} />
+        </View>
+        <View style={styles.titleWrap}>
+          <Text style={styles.count}>{(data.total ?? data.data.length).toLocaleString('fa-IR')}</Text>
+          <Text style={styles.title}>گفتگو</Text>
+        </View>
       </View>
+
+      {replyTo ? (
+        <View style={styles.replyingTo}>
+          <PressableScale haptic={false} onPress={() => setReplyTo(null)}>
+            <Text style={styles.cancelReply}>×</Text>
+          </PressableScale>
+          <Text style={styles.replyingText}>پاسخ به {replyTo.user.name}</Text>
+        </View>
+      ) : null}
 
       <View style={styles.composer}>
         <PressableScale disabled={sending} onPress={() => void send()} style={styles.send}>
-          <Text style={styles.sendText}>{sending ? '…' : 'ارسال'}</Text>
+          <Text style={styles.sendText}>{sending ? '…' : replyTo ? 'پاسخ' : 'ارسال'}</Text>
         </PressableScale>
         <TextInput
           value={body}
           onChangeText={setBody}
           multiline
-          placeholder="نظرت درباره این چیه؟"
+          placeholder={replyTo ? 'پاسخت رو بنویس…' : 'نظرت درباره این چیه؟'}
           placeholderTextColor={palette.textDim}
           textAlign="right"
           style={styles.input}
@@ -107,8 +133,9 @@ export function CommentsSection({ slug, enabled = true }: { slug: string; enable
           <CommentItem
             key={comment.id}
             comment={comment}
-            onLike={() => void like(comment)}
-            onDelete={comment.can_delete ? () => void remove(comment) : undefined}
+            onLike={like}
+            onDelete={remove}
+            onReply={setReplyTo}
           />
         ))}
       </View>
@@ -120,11 +147,13 @@ function CommentItem({
   comment,
   onLike,
   onDelete,
+  onReply,
   nested = false,
 }: {
   comment: Comment;
-  onLike: () => void;
-  onDelete?: () => void;
+  onLike: (comment: Comment) => void;
+  onDelete: (comment: Comment) => void;
+  onReply: (comment: Comment) => void;
   nested?: boolean;
 }) {
   return (
@@ -140,18 +169,22 @@ function CommentItem({
             : require('../../../assets/images/logo.png')}
           style={styles.avatar}
           contentFit="cover"
+          cachePolicy="memory-disk"
         />
       </View>
 
       <Text style={styles.body}>{comment.body}</Text>
 
       <View style={styles.actions}>
-        {onDelete ? (
-          <PressableScale haptic={false} onPress={onDelete} style={styles.smallAction}>
+        {comment.can_delete ? (
+          <PressableScale haptic={false} onPress={() => onDelete(comment)} style={styles.smallAction}>
             <Text style={styles.delete}>حذف</Text>
           </PressableScale>
         ) : null}
-        <PressableScale haptic onPress={onLike} style={styles.smallAction}>
+        <PressableScale haptic={false} onPress={() => onReply(comment)} style={styles.smallAction}>
+          <Text style={styles.replyAction}>پاسخ</Text>
+        </PressableScale>
+        <PressableScale haptic onPress={() => onLike(comment)} style={styles.smallAction}>
           <Text style={[styles.like, comment.is_liked && styles.likeActive]}>
             {comment.likes_count.toLocaleString('fa-IR')} ♥
           </Text>
@@ -162,7 +195,9 @@ function CommentItem({
         <CommentItem
           key={reply.id}
           comment={reply}
-          onLike={() => undefined}
+          onLike={onLike}
+          onDelete={onDelete}
+          onReply={onReply}
           nested
         />
       ))}
@@ -174,13 +209,29 @@ const styles = StyleSheet.create({
   root: { marginTop: spacing.xxxl },
   header: {
     flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'flex-end',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     gap: spacing.xs,
     marginBottom: spacing.md,
   },
-  count: { color: palette.textDim, fontSize: typeScale.caption },
-  title: { color: palette.white, fontSize: typeScale.title, fontWeight: fontWeight.black },
+  sortRow: { flexDirection: 'row', gap: spacing.xs },
+  titleWrap: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.xs },
+  count: { color: palette.textDim, fontFamily: fontFamily.regular, fontSize: typeScale.caption },
+  title: { color: palette.white, fontFamily: fontFamily.black, fontSize: typeScale.title, fontWeight: fontWeight.black },
+  replyingTo: {
+    minHeight: 38,
+    marginBottom: spacing.xs,
+    borderRadius: radii.md,
+    backgroundColor: 'rgba(88,244,255,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(88,244,255,0.12)',
+    paddingHorizontal: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  replyingText: { color: palette.cyan, fontFamily: fontFamily.bold, fontSize: 10 },
+  cancelReply: { color: palette.textMuted, fontSize: 20 },
   composer: {
     minHeight: 72,
     borderRadius: radii.lg,
@@ -197,6 +248,7 @@ const styles = StyleSheet.create({
     minHeight: 48,
     maxHeight: 120,
     color: palette.text,
+    fontFamily: fontFamily.regular,
     fontSize: typeScale.bodySm,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm,
@@ -210,7 +262,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  sendText: { color: palette.ink, fontWeight: fontWeight.black, fontSize: typeScale.caption },
+  sendText: { color: palette.ink, fontFamily: fontFamily.black, fontWeight: fontWeight.black, fontSize: typeScale.caption },
   list: { gap: spacing.sm, marginTop: spacing.md },
   comment: {
     borderRadius: radii.lg,
@@ -232,10 +284,11 @@ const styles = StyleSheet.create({
   },
   commentCopy: { alignItems: 'flex-end' },
   avatar: { width: 38, height: 38, borderRadius: 13, backgroundColor: palette.surface },
-  userName: { color: palette.text, fontSize: typeScale.bodySm, fontWeight: fontWeight.bold },
-  date: { color: palette.textDim, fontSize: 9, marginTop: 2 },
+  userName: { color: palette.text, fontFamily: fontFamily.bold, fontSize: typeScale.bodySm, fontWeight: fontWeight.bold },
+  date: { color: palette.textDim, fontFamily: fontFamily.regular, fontSize: 9, marginTop: 2 },
   body: {
     color: '#D7DDE6',
+    fontFamily: fontFamily.regular,
     fontSize: typeScale.bodySm,
     lineHeight: 23,
     textAlign: 'right',
@@ -243,7 +296,8 @@ const styles = StyleSheet.create({
   },
   actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
   smallAction: { paddingHorizontal: spacing.xs, paddingVertical: 4 },
-  like: { color: palette.textMuted, fontSize: typeScale.caption, fontWeight: fontWeight.bold },
+  like: { color: palette.textMuted, fontFamily: fontFamily.bold, fontSize: typeScale.caption, fontWeight: fontWeight.bold },
   likeActive: { color: palette.cyan },
-  delete: { color: palette.danger, fontSize: typeScale.caption, fontWeight: fontWeight.bold },
+  replyAction: { color: palette.cyan, fontFamily: fontFamily.bold, fontSize: typeScale.caption },
+  delete: { color: palette.danger, fontFamily: fontFamily.bold, fontSize: typeScale.caption, fontWeight: fontWeight.bold },
 });
