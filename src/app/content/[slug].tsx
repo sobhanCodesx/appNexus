@@ -257,7 +257,7 @@ function NativeVideo({
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }).start(() => spin.stop());
-    }, 15_000);
+    }, 32_000);
 
     return () => {
       clearTimeout(stopTimer);
@@ -442,33 +442,22 @@ function NativeVideo({
             source={ambientSource}
             style={StyleSheet.absoluteFill}
             contentFit="cover"
-            blurRadius={42}
+            blurRadius={52}
             transition={620}
           />
         </Animated.View>
         <LinearGradient
           colors={[
-            'rgba(2,4,8,0.14)',
-            'rgba(3,5,9,0.30)',
-            'rgba(3,5,9,0.68)',
+            'rgba(2,4,8,0.05)',
+            'rgba(3,5,9,0.17)',
+            'rgba(3,5,9,0.48)',
             palette.ink,
           ]}
-          locations={[0, 0.38, 0.72, 1]}
+          locations={[0, 0.40, 0.84, 1]}
           style={StyleSheet.absoluteFill}
         />
         <View style={styles.ambientBloomLeft} />
         <View style={styles.ambientBloomRight} />
-      </View>
-
-      <View style={styles.playerBrandRow}>
-        <View style={styles.playerBrandPill}>
-          <View style={styles.playerBrandDot} />
-          <Text style={styles.playerBrandText}>NEXUS CINEMA ENGINE</Text>
-        </View>
-        <View style={styles.playerLiveRow}>
-          <View style={styles.playerLiveDot} />
-          <Text style={styles.playerHint}>LIVE AMBIENT</Text>
-        </View>
       </View>
 
       <View style={styles.neonShell}>
@@ -509,6 +498,23 @@ function NativeVideo({
               if (player.playing) setPosterVisible(false);
             }}
           />
+
+          <View pointerEvents="none" style={styles.glassRim}>
+            <LinearGradient
+              colors={[
+                'rgba(255,255,255,0.16)',
+                'rgba(255,255,255,0.035)',
+                'rgba(255,255,255,0.00)',
+                'rgba(88,244,255,0.045)',
+              ]}
+              locations={[0, 0.22, 0.58, 1]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+            <View style={styles.glassHighlightTop} />
+            <View style={styles.glassHighlightLeft} />
+          </View>
 
           <Pressable
             accessibilityRole="button"
@@ -618,16 +624,20 @@ function NativeVideo({
         </View>
       </View>
 
-      <View style={styles.cinemaFooter}>
-        <View style={styles.paletteRail}>
-          <View style={[styles.paletteLine, { backgroundColor: palette.cyan }]} />
-          <View style={[styles.paletteLine, { backgroundColor: palette.blueHot }]} />
-          <View style={[styles.paletteLine, { backgroundColor: palette.violet }]} />
-          <View style={[styles.paletteLine, { backgroundColor: palette.magenta }]} />
-        </View>
-        <Text style={styles.paletteCaption}>
-          LIVE FRAME AMBIENT · رنگ صحنه هم‌زمان وارد فضای پلیر می‌شود
-        </Text>
+      <View pointerEvents="none" style={styles.afterglow}>
+        <LinearGradient
+          colors={[
+            'rgba(88,244,255,0)',
+            'rgba(88,244,255,0.34)',
+            'rgba(167,123,255,0.22)',
+            'rgba(255,85,213,0.32)',
+            'rgba(255,85,213,0)',
+          ]}
+          locations={[0, 0.22, 0.5, 0.78, 1]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={StyleSheet.absoluteFill}
+        />
       </View>
     </View>
   );
@@ -972,45 +982,45 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   scrollContent: { paddingBottom: 28 },
   playerWorld: {
-    minHeight: 390,
-    paddingTop: 104,
+    minHeight: 418,
+    paddingTop: 90,
     paddingHorizontal: 10,
-    paddingBottom: 20,
+    paddingBottom: 24,
     backgroundColor: palette.black,
     overflow: 'hidden',
   },
   ambientStage: {
     position: 'absolute',
-    top: 24,
-    left: -54,
-    right: -54,
-    height: 410,
+    top: -2,
+    left: -126,
+    right: -126,
+    height: 520,
     overflow: 'hidden',
   },
   ambientFrame: {
     position: 'absolute',
-    top: 22,
-    left: -22,
-    right: -22,
-    height: 330,
+    top: -8,
+    left: -48,
+    right: -48,
+    height: 430,
   },
   ambientBloomLeft: {
     position: 'absolute',
-    left: -46,
-    top: 84,
-    width: 200,
-    height: 200,
-    borderRadius: 200,
-    backgroundColor: 'rgba(88,244,255,0.075)',
+    left: -72,
+    top: 72,
+    width: 294,
+    height: 294,
+    borderRadius: 294,
+    backgroundColor: 'rgba(88,244,255,0.10)',
   },
   ambientBloomRight: {
     position: 'absolute',
-    right: -42,
-    top: 112,
-    width: 210,
-    height: 210,
-    borderRadius: 210,
-    backgroundColor: 'rgba(255,85,213,0.065)',
+    right: -76,
+    top: 92,
+    width: 310,
+    height: 310,
+    borderRadius: 310,
+    backgroundColor: 'rgba(255,85,213,0.09)',
   },
   playerBrandRow: {
     flexDirection: 'row',
@@ -1062,11 +1072,13 @@ const styles = StyleSheet.create({
   },
   neonShell: {
     width: '100%',
-    aspectRatio: 16 / 9,
-    borderRadius: 28,
+    aspectRatio: 1.68,
+    borderRadius: 30,
     overflow: 'hidden',
-    backgroundColor: palette.black,
-    padding: 2,
+    backgroundColor: 'rgba(8,12,19,0.74)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    padding: 3,
     ...shadow.card,
   },
   neonRotor: {
@@ -1078,11 +1090,40 @@ const styles = StyleSheet.create({
   },
   videoFrame: {
     flex: 1,
-    borderRadius: 26,
+    borderRadius: 27,
     overflow: 'hidden',
-    backgroundColor: palette.black,
+    backgroundColor: 'rgba(1,4,8,0.90)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.10)',
+    borderColor: 'rgba(255,255,255,0.16)',
+  },
+  glassRim: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    zIndex: 3,
+    borderRadius: 27,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    overflow: 'hidden',
+  },
+  glassHighlightTop: {
+    position: 'absolute',
+    top: 1,
+    left: 22,
+    right: 22,
+    height: 1,
+    borderRadius: 1,
+    backgroundColor: 'rgba(255,255,255,0.42)',
+  },
+  glassHighlightLeft: {
+    position: 'absolute',
+    top: 18,
+    bottom: 42,
+    left: 1,
+    width: 1,
+    backgroundColor: 'rgba(88,244,255,0.20)',
   },
   video: {
     flex: 1,
@@ -1345,27 +1386,15 @@ const styles = StyleSheet.create({
     marginTop: 2,
     textAlign: 'right',
   },
-  cinemaFooter: {
-    paddingHorizontal: 20,
-    alignItems: 'center',
-  },
-  paletteRail: {
-    height: 3,
-    width: '82%',
-    marginTop: 10,
-    flexDirection: 'row',
-    borderRadius: 3,
+  afterglow: {
+    width: '90%',
+    height: 4,
+    marginTop: 12,
+    alignSelf: 'center',
+    borderRadius: 4,
     overflow: 'hidden',
-    opacity: 0.9,
+    opacity: 0.88,
   },
-  paletteCaption: {
-    color: 'rgba(255,255,255,0.28)',
-    fontFamily: fontFamily.medium,
-    fontSize: 7,
-    textAlign: 'center',
-    marginTop: 5,
-  },
-  paletteLine: { flex: 1 },
   imageFrame: { width: '100%', height: 454, backgroundColor: palette.surface },
   topControls: { position: 'absolute', zIndex: 10, top: 54, left: layout.screenPadding, right: layout.screenPadding, flexDirection: 'row', justifyContent: 'space-between' },
   roundControl: { width: 46, height: 46, borderRadius: 17, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.14)', backgroundColor: 'rgba(3,5,9,0.54)', alignItems: 'center', justifyContent: 'center', ...shadow.soft },
