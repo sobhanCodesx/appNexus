@@ -3,7 +3,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { VideoView, useVideoPlayer } from 'expo-video';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   FlatList,
   Modal,
@@ -24,6 +24,7 @@ import { apiRequest } from '@/services/api';
 import type { DiscoverItem } from '@/types/api';
 
 const fallback = require('../../../assets/images/logo-glow.png');
+const exploreViewabilityConfig = { itemVisiblePercentThreshold: 72, minimumViewTime: 120 };
 
 type ExploreData = {
   id?: number;
@@ -114,21 +115,20 @@ export function ExploreReelsViewer({
   const { height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const listRef = useRef<FlatList<DiscoverItem>>(null);
-  const viewability = useRef({ itemVisiblePercentThreshold: 72, minimumViewTime: 120 }).current;
   const [activeIndex, setActiveIndex] = useState(Math.max(0, initialIndex));
   const [comments, setComments] = useState<{ slug: string; enabled: boolean } | null>(null);
 
   useEffect(() => {
     if (!open) return;
     const next = Math.max(0, Math.min(initialIndex, Math.max(0, items.length - 1)));
-    setActiveIndex(next);
     const frame = requestAnimationFrame(() => {
+      setActiveIndex(next);
       listRef.current?.scrollToIndex({ index: next, animated: false });
     });
     return () => cancelAnimationFrame(frame);
   }, [initialIndex, items.length, open]);
 
-  const onViewableItemsChanged = useRef(({
+  const onViewableItemsChanged = useCallback(({
     viewableItems,
   }: {
     viewableItems: { index: number | null; isViewable: boolean }[];
@@ -137,7 +137,7 @@ export function ExploreReelsViewer({
     if (active?.index !== null && active?.index !== undefined) {
       setActiveIndex(active.index);
     }
-  }).current;
+  }, []);
 
   return (
     <Modal
@@ -175,7 +175,7 @@ export function ExploreReelsViewer({
           })}
           initialScrollIndex={Math.max(0, Math.min(initialIndex, Math.max(0, items.length - 1)))}
           onViewableItemsChanged={onViewableItemsChanged}
-          viewabilityConfig={viewability}
+          viewabilityConfig={exploreViewabilityConfig}
           onScrollToIndexFailed={({ index }) => {
             requestAnimationFrame(() => {
               listRef.current?.scrollToOffset({
