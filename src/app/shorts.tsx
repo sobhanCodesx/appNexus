@@ -26,14 +26,11 @@ export default function ShortsScreen() {
   );
   const [activeId, setActiveId] = useState<number | null>(null);
 
-  useEffect(() => {
-    const first = data.data?.[0];
-    if (first && activeId === null) setActiveId(first.id);
-  }, [activeId, data.data]);
+  const effectiveActiveId = activeId ?? data.data?.[0]?.id ?? null;
 
   const onViewableItemsChanged = useRef(
-    ({ viewableItems }: { viewableItems: ViewToken<ContentCard>[] }) => {
-      const next = viewableItems.find((item) => item.isViewable)?.item;
+    ({ viewableItems }: { viewableItems: ViewToken[] }) => {
+      const next = viewableItems.find((item) => item.isViewable)?.item as ContentCard | undefined;
       if (next) setActiveId(next.id);
     },
   ).current;
@@ -51,7 +48,7 @@ export default function ShortsScreen() {
         renderItem={({ item }) => (
           <ShortItem
             item={item}
-            active={item.id === activeId}
+            active={item.id === effectiveActiveId}
             height={height}
           />
         )}
