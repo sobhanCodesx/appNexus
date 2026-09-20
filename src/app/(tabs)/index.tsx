@@ -52,7 +52,8 @@ export default function HomeScreen() {
                   <Chip label="رادار انتشار" onPress={() => router.push('/(tabs)/radar')} />
                   <Chip label="ویدیوهای تازه" onPress={() => router.push('/(tabs)/videos')} />
                   <Chip label="Explore" onPress={() => router.push('/(tabs)/explore')} />
-                  <Chip label="پیشنهادهای ویژه" />
+                  <Chip label="فروشگاه" onPress={() => router.push('/store')} />
+                  <Chip label="پیشنهادهای ویژه" onPress={() => router.push('/store?mode=offers')} />
                 </ScrollView>
               </View>
             );
@@ -95,7 +96,13 @@ export default function HomeScreen() {
               <View style={styles.section}>
                 <View style={styles.headerPad}><SectionHeader title="استودیوها" eyebrow="CREATORS" /></View>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.studioRow}>
-                  {(data.latest_studios || []).map((studio) => <StudioCard key={studio.id} item={studio} />)}
+                  {(data.latest_studios || []).map((studio) => (
+                    <StudioCard
+                      key={studio.id}
+                      item={studio}
+                      onPress={() => router.push({ pathname: '/studio/[slug]', params: { slug: studio.slug } })}
+                    />
+                  ))}
                 </ScrollView>
               </View>
             );
