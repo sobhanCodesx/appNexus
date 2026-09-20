@@ -35,7 +35,7 @@ export function InAppNotificationBanner() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [signal, setSignal] = useState<Signal | null>(null);
-  const progress = useRef(new Animated.Value(0)).current;
+  const [progress] = useState(() => new Animated.Value(0));
   const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clearTimer = useCallback(() => {
