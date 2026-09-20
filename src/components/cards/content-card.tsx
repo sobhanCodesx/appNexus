@@ -18,11 +18,13 @@ export function ContentCard({
   width = 284,
   onPress,
   featured = false,
+  home = false,
 }: {
   item: ContentItem;
   width?: number | string;
   onPress?: () => void;
   featured?: boolean;
+  home?: boolean;
 }) {
   const duration = item.duration ? Math.max(1, Math.round(item.duration / 60)) : null;
 
@@ -33,6 +35,8 @@ export function ContentCard({
       style={[
         styles.card,
         featured && styles.featured,
+        home && styles.homeCard,
+        featured && home && styles.homeFeatured,
         { width } as never,
       ]}>
       <Image
@@ -75,7 +79,12 @@ export function ContentCard({
 
         <Text
           numberOfLines={featured ? 3 : 2}
-          style={[styles.title, featured && styles.featuredTitle]}>
+          style={[
+            styles.title,
+            featured && styles.featuredTitle,
+            home && styles.homeTitle,
+            featured && home && styles.homeFeaturedTitle,
+          ]}>
           {item.title}
         </Text>
 
@@ -123,6 +132,12 @@ const styles = StyleSheet.create({
   },
   featured: {
     height: 318,
+  },
+  homeCard: {
+    height: 178,
+  },
+  homeFeatured: {
+    height: 262,
   },
   topMeta: {
     padding: spacing.sm,
@@ -196,6 +211,15 @@ const styles = StyleSheet.create({
     fontSize: typeScale.titleLg,
     lineHeight: 34,
     maxWidth: 330,
+  },
+  homeTitle: {
+    fontSize: typeScale.body,
+    lineHeight: 23,
+  },
+  homeFeaturedTitle: {
+    fontSize: 24,
+    lineHeight: 31,
+    maxWidth: 320,
   },
   footer: {
     width: '100%',
