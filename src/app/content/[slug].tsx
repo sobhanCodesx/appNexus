@@ -1,17 +1,33 @@
 import { useEventListener } from 'expo';
+import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { useEffect, useMemo, useState } from 'react';
-import { ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import {
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
 import { ContentCard } from '@/components/cards/content-card';
 import { CommentsSection } from '@/components/community/comments-section';
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { Screen } from '@/components/ui/screen';
-import { fontWeight, layout, palette, radii, spacing, typeScale } from '@/design';
+import { SectionHeader } from '@/components/ui/section-header';
+import {
+  fontWeight,
+  layout,
+  palette,
+  radii,
+  shadow,
+  spacing,
+  typeScale,
+} from '@/design';
 import { useApiResource } from '@/hooks/use-api-resource';
 import { apiRequest } from '@/services/api';
 import type { ContentDetailPayload } from '@/types/api';
@@ -30,19 +46,29 @@ export default function ContentDetailScreen() {
   const path = '/contents/' + encodeURIComponent(slug || '');
   const { data, loading, error } = useApiResource<ContentDetailPayload>(path, empty);
   const content = data.content;
-  const isVideo = Boolean(content.video_url && (content.type === 'video' || content.type === 'short'));
+  const isVideo = Boolean(
+    content.video_url && (content.type === 'video' || content.type === 'short'),
+  );
   const body = useMemo(() => htmlToPlainText(content.body), [content.body]);
 
   useEffect(() => {
     if (!content.id) return;
-    void apiRequest<{ views: number }>(path + '/views', { method: 'POST' }, { auth: false }).catch(() => undefined);
+    void apiRequest<{ views: number }>(
+      path + '/views',
+      { method: 'POST' },
+      { auth: false },
+    ).catch(() => undefined);
   }, [content.id, path]);
 
   if (loading && !content.id) {
     return (
       <Screen>
         <View style={styles.center}>
-          <Text style={styles.loading}>در حال ورود به محتوا…</Text>
+          <View style={styles.loadingOrb}>
+            <View style={styles.loadingCore} />
+          </View>
+          <Text style={styles.loadingKicker}>LOADING STORY</Text>
+          <Text style={styles.loading}>داریم محتوا رو آماده می‌کنیم…</Text>
         </View>
       </Screen>
     );
@@ -52,6 +78,7 @@ export default function ContentDetailScreen() {
     return (
       <Screen>
         <View style={styles.center}>
+          <Text style={styles.errorKicker}>SIGNAL LOST</Text>
           <Text style={styles.errorTitle}>این محتوا در دسترس نیست</Text>
           <Text style={styles.errorText}>{error}</Text>
           <PressableScale style={styles.backButton} onPress={() => router.back()}>
@@ -62,81 +89,159 @@ export default function ContentDetailScreen() {
     );
   }
 
+  const typeLabel = content.type === 'video'
+    ? 'VIDEO STORY'
+    : content.type === 'short'
+      ? 'SHORT'
+      : 'EDITORIAL';
+
   return (
     <Screen edges={['left', 'right']}>
       <View style={styles.root}>
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}>
-        {isVideo ? (
-          <NativeVideo
-            id={content.id}
-            source={String(content.video_url)}
-            duration={content.duration || undefined}
-          />
-        ) : (
-          <ImageHero uri={content.thumbnail_url || content.image_url || content.cover_url} />
-        )}
+          {isVideo ? (
+            <NativeVideo
+              id={content.id}
+              source={String(content.video_url)}
+              duration={content.duration || undefined}
+            />
+          ) : (
+            <ImageHero
+              uri={content.thumbnail_url || content.image_url || content.cover_url}
+            />
+          )}
 
-        <View style={styles.body}>
-          <View style={styles.channelRow}>
-            <View style={styles.channelCopy}>
-              <Text style={styles.channelName}>{data.channel?.name || content.channel?.name || 'PlayNexus'}</Text>
-              <Text style={styles.channelMeta}>
-                {data.channel?.subscribers_count
-                  ? data.channel.subscribers_count.toLocaleString('fa-IR') + ' دنبال‌کننده'
-                  : content.type === 'video'
-                    ? 'ویدیو'
-                    : 'فید گیمینگ'}
+          <View style={styles.body}>
+            <View style={styles.storySignalRow}>
+              <View style={styles.storySignal} />
+              <Text style={styles.storyType}>{typeLabel}</Text>
+              <View style={styles.storyMetaDivider} />
+              <Text style={styles.storyMeta}>
+                {(content.views || 0).toLocaleString('fa-IR')} بازدید
               </Text>
             </View>
 
-            {(data.channel?.avatar_url || content.channel?.avatar_url) ? (
-              <Image
-                source={{ uri: String(data.channel?.avatar_url || content.channel?.avatar_url) }}
-                style={styles.channelAvatar}
-                contentFit="cover"
-              />
-            ) : (
-              <View style={styles.channelFallback}><View style={styles.channelFallbackCore} /></View>
-            )}
-          </View>
+            <Text style={styles.title}>{content.title}</Text>
 
-          <Text style={styles.title}>{content.title}</Text>
-          {content.excerpt ? <Text style={styles.excerpt}>{content.excerpt}</Text> : null}
+            {content.excerpt ? (
+              <Text style={styles.excerpt}>{content.excerpt}</Text>
+            ) : null}
 
-          <ActionBar content={content} />
+            <ChannelCard
+              channel={data.channel}
+              fallbackChannel={content.channel}
+              type={content.type}
+            />
 
-          {body ? <Text style={styles.article}>{body}</Text> : null}
+            <ActionBar content={content} />
 
-          <CommentsSection slug={content.slug} enabled={content.allow_comments !== false} />
-
-          {(data.related || []).length ? (
-            <View style={styles.related}>
-              <Text style={styles.relatedTitle}>بعدی برای تو</Text>
-              {(data.related || []).slice(0, 4).map((item) => (
-                <View key={item.id} style={styles.relatedCard}>
-                  <ContentCard
-                    item={item}
-                    width="100%"
-                    onPress={() => router.replace({ pathname: '/content/[slug]', params: { slug: item.slug } })}
-                  />
+            {body ? (
+              <View style={styles.articleWrap}>
+                <View style={styles.articleSignal}>
+                  <View style={styles.articleSignalCore} />
                 </View>
-              ))}
-            </View>
-          ) : null}
-        </View>
+                <Text style={styles.article}>{body}</Text>
+              </View>
+            ) : null}
+
+            <CommentsSection
+              slug={content.slug}
+              enabled={content.allow_comments !== false}
+            />
+
+            {(data.related || []).length ? (
+              <View style={styles.related}>
+                <SectionHeader
+                  title="بعدی برای تو"
+                  eyebrow="KEEP EXPLORING"
+                  action="ادامه بده"
+                />
+
+                <View style={styles.relatedList}>
+                  {(data.related || []).slice(0, 4).map((item, index) => (
+                    <View key={item.id} style={styles.relatedRow}>
+                      <View style={styles.relatedIndex}>
+                        <Text style={styles.relatedIndexText}>
+                          {String(index + 1).padStart(2, '0')}
+                        </Text>
+                      </View>
+                      <View style={styles.relatedCard}>
+                        <ContentCard
+                          item={item}
+                          width="100%"
+                          onPress={() => router.replace({
+                            pathname: '/content/[slug]',
+                            params: { slug: item.slug },
+                          })}
+                        />
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            ) : null}
+          </View>
         </ScrollView>
 
         <View pointerEvents="box-none" style={styles.topControls}>
           <RoundControl label="‹" onPress={() => router.back()} />
           <RoundControl
             label="↗"
-            onPress={() => void Share.share({ title: content.title, message: content.title })}
+            onPress={() => void Share.share({
+              title: content.title,
+              message: content.title,
+            })}
           />
         </View>
       </View>
     </Screen>
+  );
+}
+
+function ChannelCard({
+  channel,
+  fallbackChannel,
+  type,
+}: {
+  channel: ContentDetailPayload['channel'];
+  fallbackChannel: ContentDetailPayload['content']['channel'];
+  type?: ContentDetailPayload['content']['type'];
+}) {
+  const avatar = channel?.avatar_url || fallbackChannel?.avatar_url;
+  const name = channel?.name || fallbackChannel?.name || 'PlayNexus';
+
+  return (
+    <View style={styles.channelCard}>
+      <View style={styles.channelSignalBox}>
+        <Text style={styles.channelSignalText}>
+          {type === 'video' ? 'WATCHING' : 'SOURCE'}
+        </Text>
+        <View style={styles.channelSignalDot} />
+      </View>
+
+      <View style={styles.channelCopy}>
+        <Text style={styles.channelName}>{name}</Text>
+        <Text style={styles.channelMeta}>
+          {channel?.subscribers_count
+            ? channel.subscribers_count.toLocaleString('fa-IR') + ' دنبال‌کننده'
+            : 'PlayNexus Gaming Channel'}
+        </Text>
+      </View>
+
+      {avatar ? (
+        <Image
+          source={{ uri: String(avatar) }}
+          style={styles.channelAvatar}
+          contentFit="cover"
+        />
+      ) : (
+        <View style={styles.channelFallback}>
+          <View style={styles.channelFallbackCore} />
+        </View>
+      )}
+    </View>
   );
 }
 
@@ -160,22 +265,33 @@ function NativeVideo({
         method: 'PUT',
         body: JSON.stringify({
           position_seconds: Math.max(0, Math.floor(currentTime)),
-          duration_seconds: Math.max(1, Math.floor(player.duration || duration || 1)),
+          duration_seconds: Math.max(
+            1,
+            Math.floor(player.duration || duration || 1),
+          ),
         }),
       },
     ).catch(() => undefined);
   });
 
   return (
-    <View style={styles.videoFrame}>
-      <VideoView
-        player={player}
-        style={styles.video}
-        contentFit="contain"
-        nativeControls
-        fullscreenOptions={{ enable: true }}
-        allowsPictureInPicture
-      />
+    <View style={styles.videoStage}>
+      <View style={styles.videoGlow} />
+      <View style={styles.videoFrame}>
+        <VideoView
+          player={player}
+          style={styles.video}
+          contentFit="contain"
+          nativeControls
+          fullscreenOptions={{ enable: true }}
+          allowsPictureInPicture
+        />
+      </View>
+
+      <View style={styles.videoBadge}>
+        <View style={styles.videoBadgeDot} />
+        <Text style={styles.videoBadgeText}>NATIVE PLAYER</Text>
+      </View>
     </View>
   );
 }
@@ -184,16 +300,32 @@ function ImageHero({ uri }: { uri?: string | null }) {
   return (
     <View style={styles.imageFrame}>
       <Image
-        source={uri ? { uri } : require('../../../assets/images/logo-glow.png')}
+        source={
+          uri
+            ? { uri }
+            : require('../../../assets/images/logo-glow.png')
+        }
         style={StyleSheet.absoluteFill}
         contentFit="cover"
       />
-      <LinearGradient colors={['transparent', palette.ink]} style={StyleSheet.absoluteFill} />
+      <LinearGradient
+        colors={[
+          'rgba(3,5,9,0.08)',
+          'rgba(3,5,9,0.00)',
+          'rgba(3,5,9,0.92)',
+        ]}
+        locations={[0, 0.55, 1]}
+        style={StyleSheet.absoluteFill}
+      />
     </View>
   );
 }
 
-function ActionBar({ content }: { content: ContentDetailPayload['content'] }) {
+function ActionBar({
+  content,
+}: {
+  content: ContentDetailPayload['content'];
+}) {
   const [reaction, setReaction] = useState(content.user_reaction || null);
   const [saved, setSaved] = useState(Boolean(content.is_saved));
 
@@ -202,12 +334,17 @@ function ActionBar({ content }: { content: ContentDetailPayload['content'] }) {
       const next = reaction === 'like' ? null : 'like';
       const response = await apiRequest<{ reaction: 'like' | null }>(
         '/contents/' + encodeURIComponent(content.slug) + '/reaction',
-        { method: 'POST', body: JSON.stringify({ type: 'like' }) },
+        {
+          method: 'POST',
+          body: JSON.stringify({ type: 'like' }),
+        },
       );
       setReaction(response.reaction ?? next);
       void Haptics.selectionAsync();
     } catch {
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      void Haptics.notificationAsync(
+        Haptics.NotificationFeedbackType.Warning,
+      );
     }
   };
 
@@ -220,56 +357,151 @@ function ActionBar({ content }: { content: ContentDetailPayload['content'] }) {
       setSaved(response.saved);
       void Haptics.selectionAsync();
     } catch {
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      void Haptics.notificationAsync(
+        Haptics.NotificationFeedbackType.Warning,
+      );
     }
   };
 
   return (
     <View style={styles.actions}>
-      <ActionPill label={reaction === 'like' ? 'پسندیدی' : 'پسند'} active={reaction === 'like'} onPress={() => void react()} />
-      <ActionPill label={saved ? 'ذخیره شد' : 'ذخیره'} active={saved} onPress={() => void save()} />
-      <ActionPill label={(content.comments_count || 0).toLocaleString('fa-IR') + ' نظر'} />
-      <ActionPill label={(content.views || 0).toLocaleString('fa-IR') + ' بازدید'} />
+      <ActionTile
+        symbol={reaction === 'like' ? '♥' : '♡'}
+        label={reaction === 'like' ? 'پسندیدی' : 'پسند'}
+        value={(content.likes_count || 0).toLocaleString('fa-IR')}
+        active={reaction === 'like'}
+        onPress={() => void react()}
+      />
+      <ActionTile
+        symbol={saved ? '◆' : '◇'}
+        label={saved ? 'ذخیره شد' : 'ذخیره'}
+        active={saved}
+        onPress={() => void save()}
+      />
+      <ActionTile
+        symbol="◌"
+        label="گفتگو"
+        value={(content.comments_count || 0).toLocaleString('fa-IR')}
+      />
     </View>
   );
 }
 
-function ActionPill({
+function ActionTile({
+  symbol,
   label,
+  value,
   active = false,
   onPress,
 }: {
+  symbol: string;
   label: string;
+  value?: string;
   active?: boolean;
   onPress?: () => void;
 }) {
   return (
-    <PressableScale haptic={Boolean(onPress)} onPress={onPress} style={[styles.actionPill, active && styles.actionPillActive]}>
-      <Text style={[styles.actionText, active && styles.actionTextActive]}>{label}</Text>
+    <PressableScale
+      haptic={Boolean(onPress)}
+      onPress={onPress}
+      style={[styles.actionTile, active && styles.actionTileActive]}>
+      <Text
+        style={[
+          styles.actionSymbol,
+          active && styles.actionSymbolActive,
+        ]}>
+        {symbol}
+      </Text>
+      <Text
+        style={[
+          styles.actionLabel,
+          active && styles.actionLabelActive,
+        ]}>
+        {label}
+      </Text>
+      {value ? <Text style={styles.actionValue}>{value}</Text> : null}
     </PressableScale>
   );
 }
 
-function RoundControl({ label, onPress }: { label: string; onPress: () => void }) {
+function RoundControl({
+  label,
+  onPress,
+}: {
+  label: string;
+  onPress: () => void;
+}) {
   return (
     <PressableScale onPress={onPress} style={styles.roundControl}>
+      <BlurView intensity={44} tint="dark" style={StyleSheet.absoluteFill} />
       <Text style={styles.roundControlText}>{label}</Text>
     </PressableScale>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
-  scrollContent: { paddingBottom: 24 },
+  root: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 28,
+  },
+  videoStage: {
+    paddingTop: 104,
+    paddingHorizontal: 12,
+    paddingBottom: 24,
+    backgroundColor: palette.black,
+  },
+  videoGlow: {
+    position: 'absolute',
+    top: 120,
+    alignSelf: 'center',
+    width: '76%',
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: 'rgba(24,124,255,0.12)',
+  },
   videoFrame: {
     width: '100%',
     aspectRatio: 16 / 9,
+    borderRadius: radii.xl,
+    overflow: 'hidden',
     backgroundColor: palette.black,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
+    ...shadow.card,
   },
-  video: { flex: 1 },
+  video: {
+    flex: 1,
+  },
+  videoBadge: {
+    alignSelf: 'flex-end',
+    marginTop: spacing.sm,
+    height: 26,
+    paddingHorizontal: 9,
+    borderRadius: radii.pill,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1,
+    borderColor: palette.line,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  videoBadgeDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 5,
+    backgroundColor: palette.success,
+  },
+  videoBadgeText: {
+    color: palette.textDim,
+    fontSize: 8,
+    fontWeight: fontWeight.black,
+    letterSpacing: 0.8,
+  },
   imageFrame: {
     width: '100%',
-    height: 390,
+    height: 454,
     backgroundColor: palette.surface,
   },
   topControls: {
@@ -284,12 +516,14 @@ const styles = StyleSheet.create({
   roundControl: {
     width: 46,
     height: 46,
-    borderRadius: 18,
+    borderRadius: 17,
+    overflow: 'hidden',
     borderWidth: 1,
-    borderColor: palette.lineStrong,
-    backgroundColor: 'rgba(5,7,11,0.72)',
+    borderColor: 'rgba(255,255,255,0.14)',
+    backgroundColor: 'rgba(3,5,9,0.54)',
     alignItems: 'center',
     justifyContent: 'center',
+    ...shadow.soft,
   },
   roundControlText: {
     color: palette.white,
@@ -298,100 +532,266 @@ const styles = StyleSheet.create({
   },
   body: {
     flex: 1,
-    marginTop: -28,
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
+    marginTop: -30,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
     backgroundColor: palette.ink,
     paddingHorizontal: layout.screenPadding,
     paddingTop: spacing.xl,
     paddingBottom: 60,
   },
-  channelRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
+  storySignalRow: {
+    flexDirection: 'row-reverse',
     alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
+    gap: 7,
+    marginBottom: spacing.sm,
   },
-  channelCopy: { alignItems: 'flex-end' },
-  channelName: { color: palette.text, fontSize: typeScale.bodySm, fontWeight: fontWeight.bold },
-  channelMeta: { color: palette.textDim, fontSize: typeScale.micro, marginTop: 2 },
-  channelAvatar: { width: 44, height: 44, borderRadius: 16, backgroundColor: palette.surface },
-  channelFallback: {
-    width: 44,
-    height: 44,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(77,163,255,0.28)',
-    backgroundColor: 'rgba(77,163,255,0.10)',
-    alignItems: 'center',
-    justifyContent: 'center',
+  storySignal: {
+    width: 28,
+    height: 2,
+    borderRadius: 2,
+    backgroundColor: palette.cyan,
   },
-  channelFallbackCore: {
-    width: 14,
-    height: 14,
-    borderRadius: 5,
-    backgroundColor: palette.blue,
-    transform: [{ rotate: '45deg' }],
+  storyType: {
+    color: palette.cyan,
+    fontSize: 8,
+    fontWeight: fontWeight.black,
+    letterSpacing: 1,
+  },
+  storyMetaDivider: {
+    width: 3,
+    height: 3,
+    borderRadius: 3,
+    backgroundColor: palette.textDim,
+  },
+  storyMeta: {
+    color: palette.textDim,
+    fontSize: 9,
   },
   title: {
     color: palette.white,
-    fontSize: 30,
-    lineHeight: 40,
+    fontSize: 34,
+    lineHeight: 44,
     fontWeight: fontWeight.black,
     textAlign: 'right',
+    letterSpacing: -0.7,
   },
   excerpt: {
     color: palette.textMuted,
     fontSize: typeScale.body,
-    lineHeight: 26,
+    lineHeight: 27,
     textAlign: 'right',
     marginTop: spacing.md,
   },
-  actions: {
-    flexDirection: 'row-reverse',
-    flexWrap: 'wrap',
-    gap: spacing.xs,
-    marginTop: spacing.lg,
-  },
-  actionPill: {
-    borderRadius: radii.pill,
+  channelCard: {
+    minHeight: 84,
+    marginTop: spacing.xl,
+    borderRadius: radii.xl,
     borderWidth: 1,
     borderColor: palette.line,
-    backgroundColor: 'rgba(255,255,255,0.035)',
-    paddingHorizontal: spacing.md,
-    paddingVertical: 9,
+    backgroundColor: 'rgba(255,255,255,0.028)',
+    padding: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
   },
-  actionPillActive: {
-    backgroundColor: 'rgba(77,163,255,0.14)',
-    borderColor: 'rgba(77,163,255,0.40)',
+  channelSignalBox: {
+    minWidth: 70,
+    height: 44,
+    borderRadius: radii.md,
+    backgroundColor: 'rgba(88,244,255,0.055)',
+    borderWidth: 1,
+    borderColor: 'rgba(88,244,255,0.14)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  actionText: { color: palette.textMuted, fontSize: typeScale.caption, fontWeight: fontWeight.semibold },
-  actionTextActive: { color: palette.cyan },
+  channelSignalText: {
+    color: palette.cyan,
+    fontSize: 7,
+    fontWeight: fontWeight.black,
+    letterSpacing: 0.8,
+  },
+  channelSignalDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 5,
+    backgroundColor: palette.success,
+    marginTop: 4,
+  },
+  channelCopy: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  channelName: {
+    color: palette.text,
+    fontSize: typeScale.bodySm,
+    fontWeight: fontWeight.black,
+  },
+  channelMeta: {
+    color: palette.textDim,
+    fontSize: typeScale.micro,
+    marginTop: 3,
+  },
+  channelAvatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 18,
+    backgroundColor: palette.surface,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  channelFallback: {
+    width: 52,
+    height: 52,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(88,244,255,0.18)',
+    backgroundColor: 'rgba(24,124,255,0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  channelFallbackCore: {
+    width: 15,
+    height: 15,
+    borderRadius: 5,
+    backgroundColor: palette.cyan,
+    transform: [{ rotate: '45deg' }],
+  },
+  actions: {
+    flexDirection: 'row-reverse',
+    gap: spacing.sm,
+    marginTop: spacing.lg,
+  },
+  actionTile: {
+    flex: 1,
+    minHeight: 86,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: palette.line,
+    backgroundColor: 'rgba(255,255,255,0.028)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionTileActive: {
+    borderColor: 'rgba(88,244,255,0.26)',
+    backgroundColor: 'rgba(88,244,255,0.075)',
+    ...shadow.cyanGlow,
+  },
+  actionSymbol: {
+    color: palette.textMuted,
+    fontSize: 20,
+  },
+  actionSymbolActive: {
+    color: palette.cyan,
+  },
+  actionLabel: {
+    color: palette.text,
+    fontSize: 10,
+    fontWeight: fontWeight.black,
+    marginTop: 4,
+  },
+  actionLabelActive: {
+    color: palette.white,
+  },
+  actionValue: {
+    color: palette.textDim,
+    fontSize: 8,
+    marginTop: 2,
+  },
+  articleWrap: {
+    marginTop: spacing.xxxl,
+    flexDirection: 'row-reverse',
+    gap: spacing.md,
+  },
+  articleSignal: {
+    width: 18,
+    alignItems: 'center',
+  },
+  articleSignalCore: {
+    width: 2,
+    flex: 1,
+    minHeight: 160,
+    borderRadius: 2,
+    backgroundColor: 'rgba(88,244,255,0.16)',
+  },
   article: {
+    flex: 1,
     color: '#D8DEE8',
     fontSize: typeScale.body,
     lineHeight: 31,
     textAlign: 'right',
-    marginTop: spacing.xl,
   },
-  related: { marginTop: spacing.xxxl },
-  relatedTitle: {
-    color: palette.white,
-    fontSize: typeScale.title,
+  related: {
+    marginTop: spacing.massive,
+  },
+  relatedList: {
+    marginTop: spacing.md,
+    gap: spacing.md,
+  },
+  relatedRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  relatedIndex: {
+    width: 28,
+    paddingTop: spacing.sm,
+    alignItems: 'center',
+  },
+  relatedIndexText: {
+    color: palette.textDim,
+    fontSize: 9,
     fontWeight: fontWeight.black,
-    textAlign: 'right',
-    marginBottom: spacing.md,
   },
-  relatedCard: { marginBottom: spacing.md },
+  relatedCard: {
+    flex: 1,
+  },
   center: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing.xl,
   },
-  loading: { color: palette.textMuted, fontSize: typeScale.body },
-  errorTitle: { color: palette.white, fontSize: typeScale.title, fontWeight: fontWeight.black },
+  loadingOrb: {
+    width: 72,
+    height: 72,
+    borderRadius: 72,
+    borderWidth: 1,
+    borderColor: 'rgba(88,244,255,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingCore: {
+    width: 15,
+    height: 15,
+    borderRadius: 5,
+    backgroundColor: palette.cyan,
+    transform: [{ rotate: '45deg' }],
+    ...shadow.cyanGlow,
+  },
+  loadingKicker: {
+    color: palette.cyan,
+    fontSize: 9,
+    fontWeight: fontWeight.black,
+    letterSpacing: 1,
+    marginTop: spacing.lg,
+  },
+  loading: {
+    color: palette.textMuted,
+    fontSize: typeScale.body,
+    marginTop: spacing.xs,
+  },
+  errorKicker: {
+    color: palette.danger,
+    fontSize: 9,
+    fontWeight: fontWeight.black,
+    letterSpacing: 1,
+  },
+  errorTitle: {
+    color: palette.white,
+    fontSize: typeScale.title,
+    fontWeight: fontWeight.black,
+    marginTop: 5,
+  },
   errorText: {
     color: palette.textMuted,
     fontSize: typeScale.bodySm,
@@ -405,5 +805,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.sm,
   },
-  backText: { color: palette.ink, fontWeight: fontWeight.black },
+  backText: {
+    color: palette.ink,
+    fontWeight: fontWeight.black,
+  },
 });
