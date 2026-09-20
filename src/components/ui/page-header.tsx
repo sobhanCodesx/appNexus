@@ -2,7 +2,7 @@ import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { fontWeight, layout, palette, radii, shadow, spacing, typeScale } from '@/design';
+import { fontWeight, layout, palette, shadow, spacing, typeScale } from '@/design';
 import { PressableScale } from './pressable-scale';
 
 export function PageHeader({
