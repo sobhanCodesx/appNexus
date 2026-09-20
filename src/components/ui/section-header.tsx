@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { fontWeight, palette, spacing, typeScale } from '@/design';
+import { fontFamily, fontWeight, palette, spacing, typeScale } from '@/design';
 
 export function SectionHeader({
   title,
@@ -59,6 +59,7 @@ const styles = StyleSheet.create({
   eyebrow: {
     color: palette.textDim,
     fontSize: typeScale.micro,
+    fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
     letterSpacing: 1.1,
   },
@@ -66,6 +67,7 @@ const styles = StyleSheet.create({
     color: palette.white,
     fontSize: typeScale.titleLg,
     lineHeight: 32,
+    fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
     textAlign: 'right',
     letterSpacing: -0.5,
@@ -79,6 +81,7 @@ const styles = StyleSheet.create({
   action: {
     color: palette.textMuted,
     fontSize: typeScale.caption,
+    fontFamily: fontFamily.bold,
     fontWeight: fontWeight.bold,
   },
   actionArrow: {
