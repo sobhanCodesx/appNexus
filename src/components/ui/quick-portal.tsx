@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { fontWeight, palette, radii, shadow, spacing, typeScale } from '@/design';
+import { fontFamily, fontWeight, palette, radii, shadow, spacing, typeScale } from '@/design';
 import { PressableScale } from './pressable-scale';
 
 type Tone = 'cyan' | 'blue' | 'violet' | 'magenta';
@@ -110,11 +110,13 @@ const styles = StyleSheet.create({
   title: {
     color: palette.white,
     fontSize: typeScale.bodySm,
+    fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
     textAlign: 'right',
   },
   caption: {
     color: palette.textDim,
+    fontFamily: fontFamily.regular,
     fontSize: 10,
     marginTop: 3,
     textAlign: 'right',
