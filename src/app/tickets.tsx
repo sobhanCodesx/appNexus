@@ -1,11 +1,13 @@
 import { FlashList } from '@shopify/flash-list';
 import { router } from 'expo-router';
+import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { Screen } from '@/components/ui/screen';
 import { fontWeight, layout, palette, radii, spacing, typeScale } from '@/design';
 import { useApiResource } from '@/hooks/use-api-resource';
+import { apiRequest } from '@/services/api';
 import type { Paginated } from '@/types/api';
 
 type Ticket = {
@@ -33,7 +35,34 @@ const labels: Record<string, string> = {
 };
 
 export default function TicketsScreen() {
-  const { data, refreshing, refresh } = useApiResource<Payload>('/tickets', empty);
+  const { data, refreshing, refresh: refreshFirst } = useApiResource<Payload>('/tickets', empty);
+  const [extraTickets, setExtraTickets] = useState<Ticket[]>([]);
+  const [page, setPage] = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  const tickets = [...(data.tickets.data || []), ...extraTickets];
+  const lastPage = data.tickets.last_page ?? 1;
+  const hasMore = page < lastPage;
+
+  const loadMore = async () => {
+    if (!hasMore || loadingMore) return;
+    setLoadingMore(true);
+    const nextPage = page + 1;
+
+    try {
+      const result = await apiRequest<Payload>('/tickets?page=' + nextPage);
+      setExtraTickets((current) => [...current, ...(result.tickets.data || [])]);
+      setPage(result.tickets.current_page ?? nextPage);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  const refresh = async () => {
+    setExtraTickets([]);
+    setPage(1);
+    await refreshFirst();
+  };
 
   return (
     <Screen>
@@ -55,7 +84,7 @@ export default function TicketsScreen() {
       </View>
 
       <FlashList
-        data={data.tickets.data || []}
+        data={tickets}
         renderItem={({ item }) => (
           <PressableScale
             style={styles.ticket}
@@ -71,7 +100,10 @@ export default function TicketsScreen() {
           </PressableScale>
         )}
         refreshing={refreshing}
-        onRefresh={refresh}
+        onRefresh={() => void refresh()}
+        onEndReached={() => void loadMore()}
+        onEndReachedThreshold={0.45}
+        ListFooterComponent={loadingMore ? <View style={styles.loading}><Text style={styles.loadingText}>تیکت‌های بیشتر…</Text></View> : null}
         contentContainerStyle={styles.content}
         ListEmptyComponent={
           <View style={styles.empty}><Text style={styles.emptyText}>تیکتی نداری؛ امیدواریم همین‌طور بمونه 😄</Text></View>
@@ -112,6 +144,8 @@ const styles = StyleSheet.create({
   status: { borderRadius: radii.pill, borderWidth: 1, borderColor: palette.lineStrong, paddingHorizontal: 9, paddingVertical: 5 },
   statusText: { color: palette.textMuted, fontSize: 10, fontWeight: fontWeight.bold },
   meta: { color: palette.textDim, fontSize: typeScale.micro, marginTop: spacing.md },
+  loading: { paddingVertical: spacing.lg, alignItems: 'center' },
+  loadingText: { color: palette.textDim, fontSize: 10 },
   empty: { paddingTop: 100, alignItems: 'center' },
   emptyText: { color: palette.textMuted, textAlign: 'center' },
 });
