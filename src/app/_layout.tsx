@@ -19,6 +19,8 @@ import { NavigationLoader } from '@/components/system/navigation-loader';
 import { palette } from '@/design';
 import { useNotificationNavigation } from '@/hooks/use-notification-navigation';
 import { getAppMeta } from '@/services/app-meta';
+import { getAccessToken } from '@/services/api';
+import { registerNativePushDevice } from '@/services/push';
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -35,6 +37,12 @@ export default function RootLayout() {
 
   useEffect(() => {
     void getAppMeta().catch(() => undefined);
+
+    void (async () => {
+      const token = await getAccessToken();
+      if (!token) return;
+      await registerNativePushDevice().catch(() => false);
+    })();
   }, []);
 
   useEffect(() => {
