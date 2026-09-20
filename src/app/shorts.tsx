@@ -32,6 +32,7 @@ export default function ShortsScreen() {
   const {
     data,
     items,
+    loading,
     refreshing,
     refresh,
     loadMore,
@@ -53,6 +54,16 @@ export default function ShortsScreen() {
 
   return (
     <View style={styles.root}>
+      {loading && !items.length ? (
+        <View style={styles.loadingScreen}>
+          <View style={styles.loadingOrbit}>
+            <View style={styles.loadingCore} />
+          </View>
+          <Text style={styles.loadingKicker}>PREPARING SHORTS</Text>
+          <Text style={styles.loadingText}>داریم ویدیوهای عمودی رو آماده می‌کنیم…</Text>
+        </View>
+      ) : null}
+
       <FlashList
         data={items}
         pagingEnabled
@@ -251,11 +262,12 @@ function ShortItem({
 
       <View style={styles.bottomCopy}>
         <View style={styles.channelRow}>
-          {item.channel?.avatar_url ? (
+          {item.channel?.logo_url || item.channel?.avatar_url ? (
             <Image
               source={{ uri: item.channel.avatar_url }}
               style={styles.channelAvatar}
               contentFit="cover"
+              cachePolicy="memory-disk"
             />
           ) : (
             <View style={styles.channelFallback}>
@@ -322,6 +334,41 @@ const styles = StyleSheet.create({
   short: {
     width: '100%',
     backgroundColor: palette.black,
+  },
+  loadingScreen: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 20,
+    backgroundColor: palette.black,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingOrbit: {
+    width: 84,
+    height: 84,
+    borderRadius: 84,
+    borderWidth: 1,
+    borderColor: 'rgba(255,85,213,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingCore: {
+    width: 17,
+    height: 17,
+    borderRadius: 6,
+    backgroundColor: palette.magenta,
+    transform: [{ rotate: '45deg' }],
+  },
+  loadingKicker: {
+    color: palette.magenta,
+    fontSize: 9,
+    fontWeight: fontWeight.black,
+    letterSpacing: 1,
+    marginTop: spacing.lg,
+  },
+  loadingText: {
+    color: palette.textMuted,
+    fontSize: 11,
+    marginTop: spacing.xs,
   },
   missingVideo: {
     position: 'absolute',

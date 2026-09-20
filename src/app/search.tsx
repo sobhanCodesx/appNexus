@@ -14,6 +14,7 @@ import {
 import { ContentCard } from '@/components/cards/content-card';
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { Screen } from '@/components/ui/screen';
+import { SkeletonBox } from '@/components/ui/skeleton';
 import {
   fontWeight,
   layout,
@@ -228,11 +229,14 @@ export default function SearchScreen() {
           data={rows}
           keyExtractor={(item) => item.id}
           ListHeaderComponent={
-            <ResultHeader
-              term={searchedTerm}
-              loading={loading}
-              stats={stats}
-            />
+            <>
+              <ResultHeader
+                term={searchedTerm}
+                loading={loading}
+                stats={stats}
+              />
+              {loading ? <SearchSkeleton /> : null}
+            </>
           }
           renderItem={({ item, index }) => {
             if (item.type === 'content') {
@@ -452,6 +456,22 @@ function ResultHeader({
   );
 }
 
+function SearchSkeleton() {
+  return (
+    <View style={styles.searchSkeleton}>
+      {Array.from({ length: 4 }).map((_, index) => (
+        <View key={index} style={styles.searchSkeletonRow}>
+          <SkeletonBox style={{ width: 56, height: 56 }} radius={18} />
+          <View style={styles.searchSkeletonCopy}>
+            <SkeletonBox style={{ width: '72%', height: 14 }} radius={6} />
+            <SkeletonBox style={{ width: '44%', height: 9 }} radius={5} />
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 function MiniStat({ value, label }: { value: number; label: string }) {
   return (
     <View style={styles.miniStat}>
@@ -462,6 +482,9 @@ function MiniStat({ value, label }: { value: number; label: string }) {
 }
 
 const styles = StyleSheet.create({
+  searchSkeleton: { gap: spacing.sm, paddingVertical: spacing.sm },
+  searchSkeletonRow: { minHeight: 78, borderRadius: radii.lg, borderWidth: 1, borderColor: palette.line, padding: spacing.sm, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  searchSkeletonCopy: { flex: 1, gap: spacing.xs, alignItems: 'flex-end' },
   top: {
     paddingHorizontal: layout.screenPadding,
     paddingTop: spacing.md,

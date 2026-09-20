@@ -7,6 +7,7 @@ import { RadarCard } from '@/components/cards/radar-card';
 import { Chip } from '@/components/ui/chip';
 import { PageHeader } from '@/components/ui/page-header';
 import { Screen } from '@/components/ui/screen';
+import { SkeletonBox } from '@/components/ui/skeleton';
 import {
   fontWeight,
   layout,
@@ -23,7 +24,7 @@ import type { GameRadarItem } from '@/types/api';
 type RadarPayload = { items?: GameRadarItem[] };
 
 export default function RadarScreen() {
-  const { data, refreshing, refresh } = useApiResource<RadarPayload>(
+  const { data, loading, refreshing, refresh } = useApiResource<RadarPayload>(
     '/game-radar',
     { items: [] },
   );
@@ -104,16 +105,20 @@ export default function RadarScreen() {
           </View>
         )}
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <View style={styles.emptyRadar}>
-              <View style={styles.emptyRadarInner}>
-                <View style={styles.emptyDot} />
+          loading ? (
+            <RadarSkeleton />
+          ) : (
+            <View style={styles.empty}>
+              <View style={styles.emptyRadar}>
+                <View style={styles.emptyRadarInner}>
+                  <View style={styles.emptyDot} />
+                </View>
               </View>
+              <Text style={styles.emptyKicker}>SCANNING</Text>
+              <Text style={styles.emptyTitle}>هنوز سیگنالی پیدا نشده</Text>
+              <Text style={styles.emptyText}>Radar مرتب به‌روزرسانی می‌شود؛ دوباره سر بزن.</Text>
             </View>
-            <Text style={styles.emptyKicker}>SCANNING</Text>
-            <Text style={styles.emptyTitle}>هنوز سیگنالی پیدا نشده</Text>
-            <Text style={styles.emptyText}>Radar مرتب به‌روزرسانی می‌شود؛ دوباره سر بزن.</Text>
-          </View>
+          )
         }
         refreshing={refreshing}
         onRefresh={refresh}
@@ -164,6 +169,19 @@ function RadarCommandCenter({
           <Metric value={xboxCount} label="XBOX" />
         </View>
       </View>
+    </View>
+  );
+}
+
+function RadarSkeleton() {
+  return (
+    <View style={styles.radarSkeleton}>
+      {Array.from({ length: 3 }).map((_, index) => (
+        <View key={index} style={styles.radarSkeletonRow}>
+          <SkeletonBox style={{ width: 42, height: 120 }} radius={14} />
+          <SkeletonBox style={{ flex: 1, height: 250 }} radius={26} />
+        </View>
+      ))}
     </View>
   );
 }
@@ -368,6 +386,8 @@ const styles = StyleSheet.create({
   cardWrap: {
     flex: 1,
   },
+  radarSkeleton: { paddingHorizontal: layout.screenPadding, gap: spacing.lg },
+  radarSkeletonRow: { flexDirection: 'row', gap: spacing.sm },
   empty: {
     paddingVertical: 80,
     alignItems: 'center',
