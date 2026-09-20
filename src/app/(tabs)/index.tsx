@@ -27,6 +27,7 @@ import {
   typeScale,
 } from '@/design';
 import { useApiResource } from '@/hooks/use-api-resource';
+import { PLAYNEXUS_API_URL } from '@/config/app';
 import { normalizeContentCards } from '@/utils/content-card';
 import type {
   ContentCard as ContentItem,
@@ -187,6 +188,18 @@ export default function HomeScreen() {
         subtitle={intelligence?.confidence?.label || 'NEXUS SIGNAL ONLINE'}
         onSearch={() => router.push('/search')}
       />
+
+      {__DEV__ && error ? (
+        <View style={styles.devError}>
+          <Text style={styles.devErrorKicker}>API DEBUG</Text>
+          <Text selectable style={styles.devErrorTitle}>اتصال Home API ناموفق بود</Text>
+          <Text selectable style={styles.devErrorUrl}>{PLAYNEXUS_API_URL}/home</Text>
+          <Text selectable style={styles.devErrorMessage}>{error}</Text>
+          <PressableScale haptic={false} onPress={() => void refresh()} style={styles.devErrorRetry}>
+            <Text style={styles.devErrorRetryText}>تلاش دوباره</Text>
+          </PressableScale>
+        </View>
+      ) : null}
 
       <FlashList
         data={sections}
@@ -855,6 +868,60 @@ function EmptyRail({ loading }: { loading: boolean }) {
 const styles = StyleSheet.create({
   content: {
     paddingBottom: 132,
+  },
+  devError: {
+    marginHorizontal: layout.screenPadding,
+    marginBottom: spacing.md,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(255,97,120,0.28)',
+    backgroundColor: 'rgba(255,97,120,0.07)',
+    padding: spacing.md,
+    alignItems: 'flex-end',
+  },
+  devErrorKicker: {
+    color: palette.danger,
+    fontFamily: fontFamily.black,
+    fontSize: 8,
+    letterSpacing: 1,
+  },
+  devErrorTitle: {
+    color: palette.white,
+    fontFamily: fontFamily.black,
+    fontSize: 13,
+    marginTop: 4,
+    textAlign: 'right',
+  },
+  devErrorUrl: {
+    color: palette.cyan,
+    fontFamily: fontFamily.medium,
+    fontSize: 9,
+    marginTop: 6,
+    textAlign: 'right',
+  },
+  devErrorMessage: {
+    color: palette.textMuted,
+    fontFamily: fontFamily.regular,
+    fontSize: 9,
+    lineHeight: 16,
+    marginTop: 6,
+    textAlign: 'right',
+  },
+  devErrorRetry: {
+    minHeight: 34,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
+    backgroundColor: 'rgba(255,255,255,0.045)',
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+  },
+  devErrorRetryText: {
+    color: palette.white,
+    fontFamily: fontFamily.bold,
+    fontSize: 9,
   },
   heroSection: {
     marginBottom: spacing.lg,
