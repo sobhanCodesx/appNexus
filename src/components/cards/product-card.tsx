@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { PressableScale } from '@/components/ui/pressable-scale';
 import {
+  fontFamily,
   fontWeight,
   palette,
   radii,
@@ -72,6 +73,7 @@ export function ProductCard({
           contentFit="cover"
           recyclingKey={String(product.id)}
           transition={180}
+          cachePolicy="memory-disk"
         />
 
         <LinearGradient
@@ -169,6 +171,7 @@ const styles = StyleSheet.create({
   discountText: {
     color: palette.white,
     fontSize: 8,
+    fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
     letterSpacing: 0.8,
   },
@@ -192,6 +195,7 @@ const styles = StyleSheet.create({
   storeBadgeText: {
     color: palette.white,
     fontSize: 8,
+    fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
     letterSpacing: 0.7,
   },
@@ -208,6 +212,7 @@ const styles = StyleSheet.create({
   tradeBadgeText: {
     color: palette.cyan,
     fontSize: 8,
+    fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
     letterSpacing: 0.7,
   },
@@ -221,6 +226,7 @@ const styles = StyleSheet.create({
   category: {
     color: 'rgba(255,255,255,0.78)',
     fontSize: 8,
+    fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
     letterSpacing: 0.8,
   },
@@ -232,6 +238,7 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: typeScale.bodySm,
     lineHeight: 21,
+    fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
     textAlign: 'right',
     minHeight: 42,
@@ -250,6 +257,7 @@ const styles = StyleSheet.create({
   price: {
     color: palette.white,
     fontSize: typeScale.bodySm,
+    fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
   },
   regularPrice: {
