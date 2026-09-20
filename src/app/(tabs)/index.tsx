@@ -4,10 +4,11 @@ import { router } from 'expo-router';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ContentCard } from '@/components/cards/content-card';
-import { HeroSpotlight } from '@/components/cards/hero-spotlight';
 import { ProductCard } from '@/components/cards/product-card';
 import { RadarCard } from '@/components/cards/radar-card';
 import { StudioCard } from '@/components/cards/studio-card';
+import { HomeGameCard } from '@/components/home/home-game-card';
+import { NexusLatestSlider } from '@/components/home/nexus-latest-slider';
 import { Reveal } from '@/components/ui/motion-primitives';
 import { PageHeader } from '@/components/ui/page-header';
 import { PressableScale } from '@/components/ui/pressable-scale';
@@ -26,19 +27,21 @@ import {
   typeScale,
 } from '@/design';
 import { useApiResource } from '@/hooks/use-api-resource';
-import { nativeHrefFromUrl } from '@/services/native-navigation';
 import { normalizeContentCards } from '@/utils/content-card';
 import type {
   ContentCard as ContentItem,
   HomeContentSection,
   HomeMixedItem,
+  HomeGame,
   HomePayload,
   HomeProduct,
-  HomeSlide,
+  NexusLatestItem,
 } from '@/types/api';
 
 type Section =
   | 'hero'
+  | 'videos'
+  | 'games'
   | 'pulse'
   | 'portals'
   | 'feed'
@@ -54,6 +57,9 @@ type Section =
 const initial: HomePayload = {
   slides: [],
   latest_feed: [],
+  latest_videos: [],
+  latest_games: [],
+  nexus_latest: [],
   game_radar: [],
   latest_studios: [],
   personalized_home: null,
@@ -68,9 +74,84 @@ const initial: HomePayload = {
 export default function HomeScreen() {
   const { data, loading, refreshing, error, refresh } = useApiResource<HomePayload>('/home', initial);
 
+  const feed = normalizeContentCards(
+    data.personalized_home?.feed?.length
+      ? data.personalized_home.feed
+      : data.latest_feed || [],
+  );
+
   const storePicks = data.featured_products?.length
     ? data.featured_products
     : data.latest_products || [];
+
+  const latestVideos = normalizeContentCards(
+    data.latest_videos?.length
+      ? data.latest_videos
+      : feed.filter((item) => item.type === 'video').slice(0, 10),
+  );
+
+  const latestGames: HomeGame[] = data.latest_games?.length
+    ? data.latest_games
+    : (data.channels || []).slice(0, 10).map((game) => ({
+        id: game.id,
+        name: game.name,
+        slug: game.slug,
+        cover_url: game.image_url,
+        background_url: game.image_url,
+      }));
+
+  const fallbackLatest: NexusLatestItem[] = [
+    ...feed.slice(0, 3).map((item) => ({
+      key: 'feed-' + item.id,
+      kind: item.type === 'video' ? 'video' as const : 'feed' as const,
+      id: item.id,
+      title: item.title,
+      subtitle: item.game?.name || item.channel?.name || 'PlayNexus',
+      slug: item.slug,
+      image_url: item.thumbnail_url || item.image_url || item.cover_url || item.game?.cover_url,
+      created_at: item.published_at,
+    })),
+    ...latestGames.slice(0, 2).map((game) => ({
+      key: 'game-' + game.id,
+      kind: 'game' as const,
+      id: game.id,
+      title: game.name,
+      subtitle: game.studio?.name || game.developer || 'بازی جدید',
+      slug: game.slug,
+      image_url: game.background_url || game.cover_url,
+      created_at: game.created_at,
+    })),
+    ...(data.latest_studios || []).slice(0, 2).map((studio) => ({
+      key: 'studio-' + studio.id,
+      kind: 'studio' as const,
+      id: studio.id,
+      title: studio.name,
+      subtitle: 'استودیو جدید',
+      slug: studio.slug,
+      image_url: studio.background_url || studio.logo_url,
+      created_at: null,
+    })),
+    ...storePicks.slice(0, 2).map((product) => ({
+      key: 'product-' + product.id,
+      kind: 'product' as const,
+      id: product.id,
+      title: product.title,
+      subtitle: product.category || 'محصول جدید',
+      slug: product.slug,
+      image_url: product.cover_url,
+      created_at: null,
+    })),
+  ];
+
+  const latestNexus = data.nexus_latest?.length
+    ? data.nexus_latest
+    : fallbackLatest.slice(0, 10);
+
+  const radar = data.personalized_home?.radar?.length
+    ? data.personalized_home.radar
+    : data.game_radar || [];
+  const intelligence = data.personalized_home?.intelligence;
+  const followedGames = data.personalized_home?.followed_games || [];
 
   const dynamicSections = (data.content_sections || [])
     .filter((section) => !['products', 'categories', 'games'].includes(section.content_type))
@@ -83,69 +164,19 @@ export default function HomeScreen() {
 
   const sections: Section[] = [
     'hero',
+    'videos',
+    'games',
     'feed',
     'radar',
     'portals',
     ...(showPulse ? ['pulse' as const] : []),
     ...(storePicks.length ? ['featured-products' as const] : []),
     ...(data.fresh_content?.length ? ['fresh' as const] : []),
-    ...(data.channels?.length ? ['channels' as const] : []),
     ...dynamicSections.map((section) => `dynamic:${section.id}` as Section),
     'studios',
   ];
-  const feed = normalizeContentCards(
-    data.personalized_home?.feed?.length
-      ? data.personalized_home.feed
-      : data.latest_feed || [],
-  );
-  const radar = data.personalized_home?.radar?.length
-    ? data.personalized_home.radar
-    : data.game_radar || [];
-  const intelligence = data.personalized_home?.intelligence;
-  const followedGames = data.personalized_home?.followed_games || [];
 
-  const primarySlide = data.slides?.[0];
-  const heroContent = feed[0];
-  const heroSlide: HomeSlide | undefined = heroContent
-    ? {
-        id: heroContent.id,
-        title: heroContent.title,
-        eyebrow: heroContent.game?.name
-          || heroContent.channel?.name
-          || 'FEATURED NOW',
-        description: heroContent.excerpt,
-        mobile_image_url: heroContent.thumbnail_url
-          || heroContent.image_url
-          || heroContent.cover_url
-          || heroContent.game?.cover_url,
-        button_label: heroContent.type === 'video'
-          ? 'تماشا'
-          : heroContent.type === 'short'
-            ? 'ببین'
-            : 'بخون',
-      }
-    : primarySlide;
-
-  const feedItems = heroContent && feed.length > 1
-    ? feed.slice(1)
-    : feed;
-
-  const openHero = () => {
-    if (heroContent) {
-      router.push({
-        pathname: '/content/[slug]',
-        params: { slug: heroContent.slug },
-      });
-      return;
-    }
-
-    if (primarySlide?.button_url) {
-      const href = nativeHrefFromUrl(primarySlide.button_url);
-      if (href) router.push(href);
-      return;
-    }
-
-  };
+  const feedItems = feed.slice(0, 8);
 
   return (
     <Screen edges={['top', 'left', 'right']}>
@@ -162,16 +193,91 @@ export default function HomeScreen() {
             return (
               <Reveal delay={40}>
                 <View style={styles.heroSection}>
-                  {loading && !heroSlide ? (
+                  {loading && !latestNexus.length ? (
                     <SkeletonHero />
                   ) : (
-                    <HeroSpotlight
-                      slide={heroSlide}
-                      onPress={heroSlide ? openHero : undefined}
-                    />
+                    <NexusLatestSlider items={latestNexus} />
                   )}
                 </View>
               </Reveal>
+            );
+          }
+
+          if (item === 'videos') {
+            return (
+              <View style={styles.section}>
+                <View style={styles.headerPad}>
+                  <SectionHeader
+                    compact
+                    title="ویدیوهای جدید"
+                    eyebrow="LATEST VIDEOS"
+                    action="همه ویدیوها"
+                    onAction={() => router.push('/(tabs)/videos')}
+                  />
+                </View>
+
+                {latestVideos.length ? (
+                  <ScrollView
+                    horizontal
+                    style={styles.rtlScroll}
+                    decelerationRate="fast"
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.horizontalRow}>
+                    {latestVideos.slice(0, 10).map((video) => (
+                      <ContentCard
+                        key={video.id}
+                        item={video}
+                        home
+                        width={258}
+                        onPress={() => router.push({
+                          pathname: '/content/[slug]',
+                          params: { slug: video.slug },
+                        })}
+                      />
+                    ))}
+                  </ScrollView>
+                ) : (
+                  <EmptyRail loading={loading} />
+                )}
+              </View>
+            );
+          }
+
+          if (item === 'games') {
+            return (
+              <View style={styles.section}>
+                <View style={styles.headerPad}>
+                  <SectionHeader
+                    compact
+                    title="بازی‌های تازه"
+                    eyebrow="GAME CLOUD"
+                    action="همه بازی‌ها"
+                    onAction={() => router.push('/games')}
+                  />
+                </View>
+
+                {latestGames.length ? (
+                  <ScrollView
+                    horizontal
+                    style={styles.rtlScroll}
+                    decelerationRate="fast"
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.horizontalRow}>
+                    {latestGames.slice(0, 10).map((game) => (
+                      <HomeGameCard
+                        key={game.id}
+                        game={game}
+                        onPress={() => router.push({
+                          pathname: '/channel/[slug]',
+                          params: { slug: game.slug },
+                        })}
+                      />
+                    ))}
+                  </ScrollView>
+                ) : (
+                  <EmptyRail loading={loading} />
+                )}
+              </View>
             );
           }
 
