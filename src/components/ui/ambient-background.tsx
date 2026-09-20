@@ -5,6 +5,7 @@ import {
   Fill,
   LinearGradient,
   RadialGradient,
+  Rect,
   vec,
 } from '@shopify/react-native-skia';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
@@ -21,27 +22,47 @@ export function AmbientBackground() {
           <LinearGradient
             start={vec(0, 0)}
             end={vec(width, height)}
-            colors={[palette.ink, '#07111F', palette.ink]}
+            colors={[palette.ink, '#07101B', '#04070C', palette.ink]}
           />
         </Fill>
 
-        <Circle cx={width * 0.86} cy={80} r={width * 0.5}>
+        <Circle cx={width * 0.92} cy={78} r={width * 0.62}>
           <RadialGradient
-            c={vec(width * 0.86, 80)}
-            r={width * 0.5}
-            colors={['rgba(77,163,255,0.25)', 'rgba(77,163,255,0)']}
+            c={vec(width * 0.92, 78)}
+            r={width * 0.62}
+            colors={[
+              'rgba(24,124,255,0.18)',
+              'rgba(88,244,255,0.05)',
+              'rgba(24,124,255,0)',
+            ]}
           />
-          <BlurMask blur={24} style="normal" />
+          <BlurMask blur={34} style="normal" />
         </Circle>
 
-        <Circle cx={width * 0.12} cy={height * 0.52} r={width * 0.54}>
+        <Circle cx={width * 0.02} cy={height * 0.58} r={width * 0.60}>
           <RadialGradient
-            c={vec(width * 0.12, height * 0.52)}
-            r={width * 0.54}
-            colors={['rgba(166,107,255,0.16)', 'rgba(166,107,255,0)']}
+            c={vec(width * 0.02, height * 0.58)}
+            r={width * 0.60}
+            colors={[
+              'rgba(167,123,255,0.11)',
+              'rgba(255,85,213,0.025)',
+              'rgba(167,123,255,0)',
+            ]}
           />
-          <BlurMask blur={28} style="normal" />
+          <BlurMask blur={38} style="normal" />
         </Circle>
+
+        <Rect x={0} y={height * 0.28} width={width} height={1}>
+          <LinearGradient
+            start={vec(0, 0)}
+            end={vec(width, 0)}
+            colors={[
+              'rgba(88,244,255,0)',
+              'rgba(88,244,255,0.055)',
+              'rgba(88,244,255,0)',
+            ]}
+          />
+        </Rect>
       </Canvas>
     </View>
   );
