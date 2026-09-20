@@ -10,6 +10,7 @@ import { fontFamily, fontWeight, layout, palette, radii, shadow, spacing, typeSc
 import { usePaginatedResource } from '@/hooks/use-paginated-resource';
 import { apiRequest } from '@/services/api';
 import { nativeHrefFromUrl } from '@/services/native-navigation';
+import { requestNotificationStateRefresh } from '@/services/notification-state';
 import { invalidateResource } from '@/services/resource-cache';
 
 type NotificationItem = {
@@ -76,6 +77,8 @@ export default function NotificationsScreen() {
     if (!unreadCount) return;
     await apiRequest('/notifications/read-all', { method: 'PATCH' });
     invalidateResource('/notifications');
+    invalidateResource('/me');
+    requestNotificationStateRefresh();
     await refresh();
   };
 
@@ -89,6 +92,8 @@ export default function NotificationsScreen() {
       );
       target = result.url ?? target;
       invalidateResource('/notifications');
+      invalidateResource('/me');
+      requestNotificationStateRefresh();
       await refresh();
     }
 
