@@ -109,7 +109,7 @@ export default function ProfileScreen() {
               <View
                 style={[
                   styles.progressFill,
-                  { width: Math.max(5, Math.min(100, profile?.profile_completion || 0)) + '%' },
+                  { width: (Math.max(5, Math.min(100, profile?.profile_completion || 0)) + '%') as `${number}%` },
                 ]}
               />
             </View>
