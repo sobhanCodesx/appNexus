@@ -20,6 +20,7 @@ import {
   typeScale,
 } from '@/design';
 import { useApiResource } from '@/hooks/use-api-resource';
+import { usePaginatedResource } from '@/hooks/use-paginated-resource';
 import type { Paginated } from '@/types/api';
 
 type Mode = 'all' | 'offers' | 'exchange';
@@ -66,11 +67,13 @@ export default function StoreScreen() {
 
   const path = basePath + '?' + query;
 
-  const { data, refreshing, refresh } = useApiResource<Paginated<ProductSummary>>(
-    path,
-    { data: [] },
-    15_000,
-  );
+  const {
+    data,
+    refreshing,
+    refresh,
+    loadMore,
+    loadingMore,
+  } = usePaginatedResource<ProductSummary>(path, 15_000);
 
   const copy = useMemo(() => {
     if (mode === 'offers') {
@@ -196,6 +199,13 @@ export default function StoreScreen() {
           void refresh();
           void categories.refresh();
         }}
+        onEndReached={() => void loadMore()}
+        onEndReachedThreshold={0.45}
+        ListFooterComponent={
+          loadingMore
+            ? <View style={styles.loadingMore}><Text style={styles.loadingMoreText}>محصول‌های بیشتر…</Text></View>
+            : null
+        }
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
         ListEmptyComponent={
@@ -322,6 +332,8 @@ const styles = StyleSheet.create({
   sectionKicker: { color: palette.cyan, fontFamily: fontFamily.black, fontSize: 8, fontWeight: fontWeight.black, letterSpacing: 1 },
   sectionTitle: { color: palette.white, fontFamily: fontFamily.black, fontSize: typeScale.title, fontWeight: fontWeight.black, marginTop: 3 },
   cell: { padding: 6 },
+  loadingMore: { paddingVertical: spacing.lg, alignItems: 'center' },
+  loadingMoreText: { color: palette.textDim, fontFamily: fontFamily.regular, fontSize: 10 },
   empty: { paddingTop: 90, alignItems: 'center', paddingHorizontal: layout.screenPadding },
   emptyMark: { width: 76, height: 76, borderRadius: 76, borderWidth: 1, borderColor: 'rgba(88,244,255,0.14)', alignItems: 'center', justifyContent: 'center' },
   emptyCore: { width: 18, height: 18, borderRadius: 6, backgroundColor: palette.cyan, transform: [{ rotate: '45deg' }], ...shadow.cyanGlow },
