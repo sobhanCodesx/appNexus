@@ -6,9 +6,14 @@ on:
       - native-premium-v1
     paths:
       - package.json
+      - .github/workflows/sync-native-deps.yml
 
 permissions:
   contents: write
+
+concurrency:
+  group: native-dependency-lock
+  cancel-in-progress: false
 
 jobs:
   lockfile:
@@ -22,7 +27,15 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm install
+      - name: Generate lockfile
+        run: |
+          npm install
+          cp package-lock.json /tmp/package-lock.json
+      - name: Rebase lockfile onto latest branch
+        run: |
+          git fetch origin native-premium-v1
+          git reset --hard origin/native-premium-v1
+          cp /tmp/package-lock.json package-lock.json
       - name: Commit lockfile
         run: |
           if git diff --quiet package-lock.json; then
