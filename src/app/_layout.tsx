@@ -7,10 +7,13 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { palette } from '@/design';
+import { useNotificationNavigation } from '@/hooks/use-notification-navigation';
 
 void SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  useNotificationNavigation();
+
   useEffect(() => {
     void SplashScreen.hideAsync();
   }, []);
