@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
+import { ExploreReelsViewer } from '@/components/explore/explore-reels-viewer';
 import { ExpandableText } from '@/components/ui/expandable-text';
 import { StoryTray } from '@/components/stories/story-tray';
 import { PressableScale } from '@/components/ui/pressable-scale';
@@ -39,6 +40,7 @@ type FeedItem = ContentItem & {
 export default function ExploreScreen() {
   const { width } = useWindowDimensions();
   const [mode, setMode] = useState<Mode>('discover');
+  const [selectedExploreIndex, setSelectedExploreIndex] = useState<number | null>(null);
 
   const discover = usePaginatedResource<DiscoverItem>('/discover?per_page=30', 15_000);
   const feed = usePaginatedResource<FeedItem>('/feed?tab=for-you&per_page=14', 15_000);
@@ -125,6 +127,10 @@ export default function ExploreScreen() {
           refresh={discover.refresh}
           loadMore={discover.loadMore}
           loadingMore={discover.loadingMore}
+          onOpen={(item) => {
+            const index = discover.items.findIndex((entry) => entry.key === item.key);
+            if (index >= 0) setSelectedExploreIndex(index);
+          }}
         />
       ) : (
         <LinkedFeed
@@ -136,6 +142,15 @@ export default function ExploreScreen() {
           loadingMore={feed.loadingMore}
         />
       )}
+
+      <ExploreReelsViewer
+        open={selectedExploreIndex !== null}
+        items={discover.items}
+        initialIndex={selectedExploreIndex ?? 0}
+        loadingMore={discover.loadingMore}
+        onClose={() => setSelectedExploreIndex(null)}
+        onLoadMore={discover.loadMore}
+      />
     </Screen>
   );
 }
@@ -148,6 +163,7 @@ function DiscoverGrid({
   refresh,
   loadMore,
   loadingMore,
+  onOpen,
 }: {
   width: number;
   groups: ExploreGroup[];
@@ -156,6 +172,7 @@ function DiscoverGrid({
   refresh: () => void;
   loadMore: () => Promise<void>;
   loadingMore: boolean;
+  onOpen: (item: DiscoverItem) => void;
 }) {
   const unit = Math.floor((width - GRID_GAP * 2) / 3);
   const feature = unit * 2 + GRID_GAP;
@@ -169,7 +186,7 @@ function DiscoverGrid({
           return (
             <View style={[styles.gridRow, { height: unit }]}>
               {item.items.map((entry) => (
-                <ExploreTile key={entry.key} item={entry} width={unit} height={unit} />
+                <ExploreTile key={entry.key} item={entry} width={unit} height={unit} onOpen={onOpen} />
               ))}
               {item.items.length < 3
                 ? Array.from({ length: 3 - item.items.length }).map((_, index) => (
@@ -181,11 +198,11 @@ function DiscoverGrid({
         }
 
         const [first, second, third] = item.items;
-        const big = first ? <ExploreTile item={first} width={feature} height={feature} /> : null;
+        const big = first ? <ExploreTile item={first} width={feature} height={feature} onOpen={onOpen} /> : null;
         const side = (
           <View style={[styles.sideColumn, { width: unit, height: feature }]}>
-            {second ? <ExploreTile item={second} width={unit} height={unit} /> : <View style={{ width: unit, height: unit }} />}
-            {third ? <ExploreTile item={third} width={unit} height={unit} /> : <View style={{ width: unit, height: unit }} />}
+            {second ? <ExploreTile item={second} width={unit} height={unit} onOpen={onOpen} /> : <View style={{ width: unit, height: unit }} />}
+            {third ? <ExploreTile item={third} width={unit} height={unit} onOpen={onOpen} /> : <View style={{ width: unit, height: unit }} />}
           </View>
         );
 
@@ -214,25 +231,26 @@ function DiscoverGrid({
   );
 }
 
-function ExploreTile({ item, width, height }: { item: DiscoverItem; width: number; height: number }) {
+function ExploreTile({
+  item,
+  width,
+  height,
+  onOpen,
+}: {
+  item: DiscoverItem;
+  width: number;
+  height: number;
+  onOpen: (item: DiscoverItem) => void;
+}) {
   const data = item.data || {};
   const uri = data.media_url || data.thumbnail_url || data.image_url || data.cover_url;
-  const slug = typeof data.slug === 'string' ? data.slug : null;
   const contentType = typeof data.type === 'string' ? data.type : null;
-  const isVideo = contentType === 'video' || contentType === 'short';
-
-  const open = () => {
-    if (!slug) return;
-    if (item.kind === 'content') {
-      router.push({ pathname: '/content/[slug]', params: { slug } });
-      return;
-    }
-    router.push({ pathname: '/product/[slug]', params: { slug } });
-  };
+  const mediaType = typeof data.media_type === 'string' ? data.media_type : null;
+  const isVideo = contentType === 'video' || contentType === 'short' || mediaType === 'video';
 
   return (
     <PressableScale
-      onPress={open}
+      onPress={() => onOpen(item)}
       pressedScale={0.99}
       style={[styles.tile, { width, height }]}>
       <Image

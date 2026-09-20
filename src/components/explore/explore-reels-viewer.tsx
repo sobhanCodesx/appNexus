@@ -3,7 +3,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { VideoView, useVideoPlayer } from 'expo-video';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   FlatList,
   Modal,
@@ -176,6 +176,14 @@ export function ExploreReelsViewer({
           initialScrollIndex={Math.max(0, Math.min(initialIndex, Math.max(0, items.length - 1)))}
           onViewableItemsChanged={onViewableItemsChanged}
           viewabilityConfig={viewability}
+          onScrollToIndexFailed={({ index }) => {
+            requestAnimationFrame(() => {
+              listRef.current?.scrollToOffset({
+                offset: Math.max(0, index) * height,
+                animated: false,
+              });
+            });
+          }}
           onEndReached={() => void onLoadMore()}
           onEndReachedThreshold={0.7}
           windowSize={5}
