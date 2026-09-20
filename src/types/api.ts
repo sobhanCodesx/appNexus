@@ -28,24 +28,57 @@ export type GameRadarItem = {
   xbox?: { available?: boolean; url?: string | null };
 };
 
+export type ContentChannel = {
+  id: number;
+  name: string;
+  slug?: string;
+  url?: string;
+  avatar_url?: ImageUrl;
+};
+
 export type ContentCard = {
   id: number;
+  type?: 'post' | 'video' | 'short';
   title: string;
   slug: string;
   excerpt?: string | null;
   thumbnail_url?: ImageUrl;
   image_url?: ImageUrl;
   cover_url?: ImageUrl;
+  video_url?: ImageUrl;
   views?: number;
   duration?: number | null;
   feed_type?: string | null;
   badge?: string | null;
+  likes_count?: number;
+  comments_count?: number;
+  is_liked?: boolean;
+  allow_comments?: boolean;
+  published_at?: string | null;
+  channel?: ContentChannel | null;
   game?: {
     id: number;
     name: string;
     slug: string;
     cover_url?: ImageUrl;
   } | null;
+};
+
+export type ContentDetailPayload = {
+  content: ContentCard & {
+    body?: string | null;
+    video_mime?: string | null;
+    dislikes_count?: number;
+    user_reaction?: 'like' | 'dislike' | null;
+    is_saved?: boolean;
+  };
+  channel?: (ContentChannel & {
+    background_url?: ImageUrl;
+    subscribers_count?: number;
+    is_subscribed?: boolean;
+  }) | null;
+  playlist?: Record<string, unknown> | null;
+  related?: ContentCard[];
 };
 
 export type StudioCard = {
@@ -66,7 +99,7 @@ export type HomePayload = {
     feed?: ContentCard[];
     videos?: ContentCard[];
     radar?: GameRadarItem[];
-    followed_games?: Array<{ id: number; name: string; slug: string; image_url?: ImageUrl }>;
+    followed_games?: { id: number; name: string; slug: string; image_url?: ImageUrl }[];
     intelligence?: {
       confidence?: { key?: string; label?: string };
       focus_reason?: string | null;
@@ -77,15 +110,15 @@ export type HomePayload = {
 export type DiscoverItem = {
   key: string;
   kind: 'content' | 'product_media';
-  data: Record<string, any>;
+  data: Record<string, unknown>;
 };
 
 export type SearchPayload = {
   query: string;
-  products: Array<Record<string, any>>;
+  products: Record<string, unknown>[];
   content: ContentCard[];
-  categories: Array<Record<string, any>>;
-  channels: Array<Record<string, any>>;
+  categories: Record<string, unknown>[];
+  channels: Record<string, unknown>[];
 };
 
 export type ProfilePayload = {
