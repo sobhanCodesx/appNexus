@@ -48,7 +48,7 @@ export default function HomeScreen() {
   const followedGames = data.personalized_home?.followed_games || [];
 
   const primarySlide = data.slides?.[0];
-  const heroContent = primarySlide ? undefined : feedItems[0];
+  const heroContent = primarySlide ? undefined : feed[0];
   const heroSlide: HomeSlide | undefined = primarySlide ?? (heroContent
     ? {
         id: heroContent.id,
@@ -64,7 +64,7 @@ export default function HomeScreen() {
       }
     : undefined);
 
-  const feedItems = heroContent && feedItems.length > 1
+  const feedItems = heroContent && feed.length > 1
     ? feed.slice(1)
     : feed;
 
@@ -364,7 +364,7 @@ const styles = StyleSheet.create({
   horizontalRow: {
     gap: spacing.md,
     paddingHorizontal: layout.screenPadding,
-    paddingTop: spacing.md,
+    paddingTop: spacing.sm,
   },
   studioRow: {
     gap: spacing.md,
