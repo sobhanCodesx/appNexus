@@ -1,142 +1,90 @@
+import { useEventListener } from 'expo';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { VideoView, useVideoPlayer } from 'expo-video';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Animated,
+  Linking,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 
+import type { StorefrontStory } from '@/components/stories/story-tray';
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { Screen } from '@/components/ui/screen';
 import { SkeletonBox } from '@/components/ui/skeleton';
 import { fontFamily, fontWeight, palette, spacing } from '@/design';
 import { usePaginatedResource } from '@/hooks/use-paginated-resource';
 
-type StoryItem = {
-  id: number;
-  type: 'story';
-  title: string;
-  slug: string;
-  excerpt?: string | null;
-  media_type?: 'image' | 'video' | null;
-  media_url?: string | null;
-  thumbnail_url?: string | null;
-  duration?: number | null;
-  link_url?: string | null;
-  link_label?: string | null;
-  published_at?: string | null;
-  author?: { name?: string | null; avatar_url?: string | null } | null;
-  game?: {
-    id: number;
-    name: string;
-    slug: string;
-    cover_url?: string | null;
-    logo_url?: string | null;
-  } | null;
-};
-
-
 const fallback = require('../../assets/images/logo-glow.png');
-const STORY_DURATION = 6200;
-
-function slugOf(item: StoryItem) {
-  return item.slug;
-}
-
-function imageOf(item: StoryItem) {
-  return item.thumbnail_url
-    || item.media_url
-    || item.game?.cover_url
-    || item.game?.logo_url;
-}
-
-function avatarOf(item: StoryItem) {
-  return item.author?.avatar_url
-    || item.game?.logo_url
-    || item.game?.cover_url
-    || imageOf(item);
-}
-
-function authorOf(item: StoryItem) {
-  return item.author?.name
-    || item.game?.name
-    || 'PlayNexus';
-}
+const IMAGE_DURATION = 5000;
 
 export default function StoriesScreen() {
   const params = useLocalSearchParams<{ start?: string }>();
   const start = Array.isArray(params.start) ? params.start[0] : params.start;
-  const stories = usePaginatedResource<StoryItem>('/stories?per_page=24', 45_000);
+  const stories = usePaginatedResource<StorefrontStory>('/stories?per_page=24', 45_000);
   const items = useMemo(
-    () => (stories.data.data || []).filter((item) => Boolean(imageOf(item))),
+    () => (stories.data.data || []).filter((item) => Boolean(item.media_url)),
     [stories.data.data],
   );
 
   const [active, setActive] = useState(0);
-  const [progress] = useState(() => new Animated.Value(0));
-  const remaining = useRef(STORY_DURATION);
+  const [progress, setProgress] = useState(0);
+  const [manualPaused, setManualPaused] = useState(false);
+  const [holding, setHolding] = useState(false);
+  const [muted, setMuted] = useState(false);
 
   useEffect(() => {
     if (!items.length || !start) return;
-    const index = items.findIndex((item) => slugOf(item) === start);
+    const index = items.findIndex((item) => item.slug === start);
     if (index >= 0) {
-      const frame = requestAnimationFrame(() => setActive(index));
+      const frame = requestAnimationFrame(() => {
+        setProgress(0);
+        setActive(index);
+      });
       return () => cancelAnimationFrame(frame);
     }
   }, [items, start]);
 
-  const next = useCallback(() => {
+  const goTo = useCallback((index: number) => {
     if (!items.length) return;
+    if (index < 0) {
+      setProgress(0);
+      setActive(0);
+      return;
+    }
+    if (index >= items.length) {
+      router.back();
+      return;
+    }
 
-    setActive((current) => {
-      if (current >= items.length - 1) {
-        requestAnimationFrame(() => router.back());
-        return current;
-      }
-      return current + 1;
-    });
+    setProgress(0);
+    setManualPaused(false);
+    setHolding(false);
+    setActive(index);
   }, [items.length]);
 
-  const previous = useCallback(() => {
-    setActive((current) => Math.max(0, current - 1));
-  }, []);
+  const next = useCallback(() => goTo(active + 1), [active, goTo]);
+  const previous = useCallback(() => goTo(active - 1), [active, goTo]);
 
-  const startProgress = useCallback((duration: number) => {
-    Animated.timing(progress, {
-      toValue: 1,
-      duration,
-      useNativeDriver: false,
-    }).start(({ finished }) => {
-      if (finished) next();
-    });
-  }, [next, progress]);
+  const item = items[active];
+  const paused = manualPaused || holding;
 
   useEffect(() => {
-    if (!items.length) return;
+    if (!item || item.media_type === 'video' || paused) return;
 
-    progress.stopAnimation();
-    progress.setValue(0);
-    remaining.current = STORY_DURATION;
-    startProgress(STORY_DURATION);
+    const startedAt = Date.now() - progress * IMAGE_DURATION;
+    const timer = setInterval(() => {
+      const value = Math.min(1, (Date.now() - startedAt) / IMAGE_DURATION);
+      setProgress(value);
+      if (value >= 1) next();
+    }, 50);
 
-    return () => {
-      progress.stopAnimation();
-    };
-  }, [active, items.length, progress, startProgress]);
-
-  const pause = useCallback(() => {
-    progress.stopAnimation((value) => {
-      remaining.current = Math.max(120, Math.round(STORY_DURATION * (1 - value)));
-    });
-  }, [progress]);
-
-  const resume = useCallback(() => {
-    startProgress(remaining.current);
-  }, [startProgress]);
+    return () => clearInterval(timer);
+  }, [active, item, next, paused]);
 
   if (stories.loading && !items.length) {
     return (
@@ -144,7 +92,7 @@ export default function StoriesScreen() {
         <View style={styles.loading}>
           <SkeletonBox style={StyleSheet.absoluteFill} radius={0} />
           <View style={styles.loadingBars}>
-            {Array.from({ length: 5 }).map((_, index) => (
+            {Array.from({ length: 6 }).map((_, index) => (
               <View key={index} style={styles.loadingBar} />
             ))}
           </View>
@@ -153,36 +101,29 @@ export default function StoriesScreen() {
     );
   }
 
-  const item = items[active];
   if (!item) return null;
-
-  const image = imageOf(item);
-  const avatar = avatarOf(item);
-  const caption = item.excerpt || '';
-  const activeWidth = progress.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0%', '100%'],
-  });
 
   return (
     <Screen edges={['left', 'right']} ambient={false}>
       <View style={styles.root}>
-        <Image
-          source={image ? { uri: String(image) } : fallback}
-          style={StyleSheet.absoluteFill}
-          contentFit="cover"
-          cachePolicy="memory-disk"
-          transition={100}
+        <StoryMedia
+          key={item.id}
+          story={item}
+          paused={paused}
+          muted={muted}
+          onProgress={setProgress}
+          onEnded={next}
         />
 
         <LinearGradient
+          pointerEvents="none"
           colors={[
-            'rgba(0,0,0,0.48)',
-            'rgba(0,0,0,0.04)',
+            'rgba(0,0,0,0.78)',
+            'rgba(0,0,0,0.08)',
             'rgba(0,0,0,0.02)',
-            'rgba(0,0,0,0.62)',
+            'rgba(0,0,0,0.68)',
           ]}
-          locations={[0, 0.22, 0.68, 1]}
+          locations={[0, 0.24, 0.67, 1]}
           style={StyleSheet.absoluteFill}
         />
 
@@ -191,32 +132,47 @@ export default function StoriesScreen() {
             <View key={story.id} style={styles.progressTrack}>
               {index < active ? <View style={styles.progressComplete} /> : null}
               {index === active ? (
-                <Animated.View style={[styles.progressActive, { width: activeWidth }]} />
+                <View style={[styles.progressActive, { width: `${Math.max(0, Math.min(1, progress)) * 100}%` }]} />
               ) : null}
             </View>
           ))}
         </View>
 
         <View style={styles.header}>
-          <View style={styles.authorRow}>
-            <View style={styles.avatarRing}>
-              <Image
-                source={avatar ? { uri: String(avatar) } : fallback}
-                style={styles.avatar}
-                contentFit="cover"
-                cachePolicy="memory-disk"
-              />
-            </View>
-            <View style={styles.authorCopy}>
-              <Text numberOfLines={1} style={styles.author}>{authorOf(item)}</Text>
-              <Text style={styles.time}>الان</Text>
+          <View style={styles.identity}>
+            <Image
+              source={item.channel_avatar_url ? { uri: item.channel_avatar_url } : fallback}
+              style={styles.channelAvatar}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+            />
+            <View style={styles.identityCopy}>
+              <Text numberOfLines={1} style={styles.channelName}>
+                {item.channel_name || 'PlayNexus'}
+              </Text>
+              <Text numberOfLines={1} style={styles.storyTitle}>{item.title}</Text>
             </View>
           </View>
 
           <View style={styles.headerActions}>
             <PressableScale
               haptic={false}
-              pressedScale={0.94}
+              onPress={() => setManualPaused((value) => !value)}
+              style={styles.iconButton}>
+              <Text style={styles.controlGlyph}>{paused ? '▶' : 'Ⅱ'}</Text>
+            </PressableScale>
+
+            {item.media_type === 'video' ? (
+              <PressableScale
+                haptic={false}
+                onPress={() => setMuted((value) => !value)}
+                style={styles.iconButton}>
+                <Text style={styles.controlGlyph}>{muted ? '×♪' : '♪'}</Text>
+              </PressableScale>
+            ) : null}
+
+            <PressableScale
+              haptic={false}
               onPress={() => router.back()}
               style={styles.iconButton}>
               <Text style={styles.close}>×</Text>
@@ -225,27 +181,133 @@ export default function StoriesScreen() {
         </View>
 
         <Pressable
-          onPressIn={pause}
-          onPressOut={resume}
+          onPressIn={() => setHolding(true)}
+          onPressOut={() => setHolding(false)}
           onPress={previous}
-          style={styles.leftTap}
+          style={styles.previousTap}
           accessibilityLabel="استوری قبلی"
         />
         <Pressable
-          onPressIn={pause}
-          onPressOut={resume}
+          onPressIn={() => setHolding(true)}
+          onPressOut={() => setHolding(false)}
           onPress={next}
-          style={styles.rightTap}
+          style={styles.nextTap}
           accessibilityLabel="استوری بعدی"
         />
 
-        <View pointerEvents="none" style={styles.bottom}>
-          <Text numberOfLines={2} style={styles.caption}>
-            {caption || item.title}
-          </Text>
+        <Text pointerEvents="none" style={styles.rightChevron}>›</Text>
+        <Text pointerEvents="none" style={styles.leftChevron}>‹</Text>
+
+        <View pointerEvents="box-none" style={styles.bottom}>
+          {item.excerpt ? (
+            <View style={styles.captionBox}>
+              <Text style={styles.caption}>{item.excerpt}</Text>
+            </View>
+          ) : null}
+
+          {item.link_url ? (
+            <PressableScale
+              haptic
+              onPress={() => {
+                if (item.link_url) void Linking.openURL(item.link_url);
+              }}
+              style={styles.linkButton}>
+              <Text style={styles.linkArrow}>↖</Text>
+              <Text style={styles.linkText}>
+                {item.link_label?.trim() || 'مشاهده لینک'}
+              </Text>
+            </PressableScale>
+          ) : null}
         </View>
       </View>
     </Screen>
+  );
+}
+
+function StoryMedia({
+  story,
+  paused,
+  muted,
+  onProgress,
+  onEnded,
+}: {
+  story: StorefrontStory;
+  paused: boolean;
+  muted: boolean;
+  onProgress: (value: number) => void;
+  onEnded: () => void;
+}) {
+  if (story.media_type !== 'video') {
+    return (
+      <Image
+        source={story.media_url ? { uri: story.media_url } : fallback}
+        style={StyleSheet.absoluteFill}
+        contentFit="cover"
+        cachePolicy="memory-disk"
+        transition={100}
+      />
+    );
+  }
+
+  return (
+    <StoryVideo
+      source={String(story.media_url || '')}
+      paused={paused}
+      muted={muted}
+      onProgress={onProgress}
+      onEnded={onEnded}
+    />
+  );
+}
+
+function StoryVideo({
+  source,
+  paused,
+  muted,
+  onProgress,
+  onEnded,
+}: {
+  source: string;
+  paused: boolean;
+  muted: boolean;
+  onProgress: (value: number) => void;
+  onEnded: () => void;
+}) {
+  const player = useVideoPlayer({ uri: source }, (instance) => {
+    instance.timeUpdateEventInterval = 0.08;
+    instance.muted = muted;
+    instance.play();
+  });
+
+  useEffect(() => {
+    player.muted = muted;
+  }, [muted, player]);
+
+  useEffect(() => {
+    if (paused) {
+      player.pause();
+    } else {
+      player.play();
+    }
+  }, [paused, player]);
+
+  useEventListener(player, 'timeUpdate', ({ currentTime }) => {
+    const duration = player.duration || 0;
+    onProgress(duration > 0 ? Math.min(1, currentTime / duration) : 0);
+  });
+
+  useEventListener(player, 'playToEnd', () => {
+    onProgress(1);
+    onEnded();
+  });
+
+  return (
+    <VideoView
+      player={player}
+      style={StyleSheet.absoluteFill}
+      contentFit="cover"
+      nativeControls={false}
+    />
   );
 }
 
@@ -256,19 +318,19 @@ const styles = StyleSheet.create({
   },
   progressRow: {
     position: 'absolute',
-    zIndex: 20,
-    top: 48,
+    zIndex: 30,
+    top: 46,
     left: 8,
     right: 8,
-    height: 3,
+    height: 4,
     flexDirection: 'row',
     gap: 3,
   },
   progressTrack: {
     flex: 1,
-    height: 2.5,
-    borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.34)',
+    height: 3,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255,255,255,0.30)',
     overflow: 'hidden',
   },
   progressComplete: {
@@ -280,113 +342,149 @@ const styles = StyleSheet.create({
     backgroundColor: palette.white,
   },
   progressActive: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
+    height: 3,
+    borderRadius: 4,
     backgroundColor: palette.white,
-    borderRadius: 3,
   },
   header: {
     position: 'absolute',
-    zIndex: 20,
-    top: 58,
-    left: 12,
-    right: 12,
-    height: 54,
+    zIndex: 30,
+    top: 56,
+    left: 10,
+    right: 10,
+    minHeight: 52,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
   },
-  authorRow: {
+  identity: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 9,
+    gap: 8,
   },
-  avatarRing: {
-    width: 38,
-    height: 38,
-    borderRadius: 38,
-    padding: 1.5,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.70)',
-    backgroundColor: 'rgba(0,0,0,0.20)',
-  },
-  avatar: {
-    flex: 1,
+  channelAvatar: {
+    width: 36,
+    height: 36,
     borderRadius: 36,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.32)',
   },
-  authorCopy: {
-    flex: 1,
+  identityCopy: {
+    maxWidth: 190,
     alignItems: 'flex-start',
   },
-  author: {
-    maxWidth: 190,
+  channelName: {
     color: palette.white,
     fontFamily: fontFamily.bold,
     fontWeight: fontWeight.bold,
     fontSize: 12,
   },
-  time: {
-    color: 'rgba(255,255,255,0.70)',
+  storyTitle: {
+    maxWidth: 185,
+    color: 'rgba(255,255,255,0.72)',
     fontFamily: fontFamily.regular,
     fontSize: 9,
     marginTop: 1,
   },
   headerActions: {
+    marginLeft: 'auto',
     flexDirection: 'row',
     alignItems: 'center',
   },
   iconButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  controlGlyph: {
+    color: palette.white,
+    fontFamily: fontFamily.black,
+    fontWeight: fontWeight.black,
+    fontSize: 15,
+  },
   close: {
     color: palette.white,
-    fontSize: 30,
-    lineHeight: 32,
     fontFamily: fontFamily.regular,
+    fontSize: 29,
+    lineHeight: 30,
   },
-  leftTap: {
+  previousTap: {
     position: 'absolute',
-    zIndex: 10,
-    top: 115,
-    left: 0,
-    bottom: 115,
-    width: '38%',
-  },
-  rightTap: {
-    position: 'absolute',
-    zIndex: 10,
-    top: 115,
+    zIndex: 20,
+    top: 112,
     right: 0,
-    bottom: 115,
-    width: '62%',
+    bottom: 100,
+    width: '34%',
+  },
+  nextTap: {
+    position: 'absolute',
+    zIndex: 20,
+    top: 112,
+    left: 0,
+    bottom: 100,
+    width: '34%',
+  },
+  rightChevron: {
+    position: 'absolute',
+    zIndex: 21,
+    right: 11,
+    top: '49%',
+    color: 'rgba(255,255,255,0.68)',
+    fontSize: 38,
+    lineHeight: 40,
+  },
+  leftChevron: {
+    position: 'absolute',
+    zIndex: 21,
+    left: 11,
+    top: '49%',
+    color: 'rgba(255,255,255,0.68)',
+    fontSize: 38,
+    lineHeight: 40,
   },
   bottom: {
     position: 'absolute',
-    zIndex: 20,
-    left: 14,
-    right: 14,
-    bottom: 28,
-    alignItems: 'center',
+    zIndex: 30,
+    left: 18,
+    right: 18,
+    bottom: 26,
+    gap: spacing.sm,
+  },
+  captionBox: {
+    borderRadius: 18,
+    padding: 12,
+    backgroundColor: 'rgba(0,0,0,0.44)',
   },
   caption: {
-    maxWidth: 330,
     color: palette.white,
     fontFamily: fontFamily.medium,
     fontWeight: fontWeight.medium,
     fontSize: 12,
-    lineHeight: 20,
-    textAlign: 'center',
-    textShadowColor: 'rgba(0,0,0,0.72)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 5,
-    marginBottom: spacing.sm,
+    lineHeight: 21,
+    textAlign: 'right',
+  },
+  linkButton: {
+    minHeight: 46,
+    borderRadius: 18,
+    backgroundColor: palette.white,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+  },
+  linkArrow: {
+    color: palette.ink,
+    fontFamily: fontFamily.black,
+    fontSize: 15,
+  },
+  linkText: {
+    color: palette.ink,
+    fontFamily: fontFamily.black,
+    fontWeight: fontWeight.black,
+    fontSize: 11,
   },
   loading: {
     flex: 1,
@@ -394,7 +492,7 @@ const styles = StyleSheet.create({
   },
   loadingBars: {
     position: 'absolute',
-    top: 48,
+    top: 46,
     left: 8,
     right: 8,
     flexDirection: 'row',
@@ -402,8 +500,8 @@ const styles = StyleSheet.create({
   },
   loadingBar: {
     flex: 1,
-    height: 2.5,
-    borderRadius: 3,
+    height: 3,
+    borderRadius: 4,
     backgroundColor: 'rgba(255,255,255,0.28)',
   },
 });

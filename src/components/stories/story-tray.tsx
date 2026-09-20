@@ -1,16 +1,15 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { PressableScale } from '@/components/ui/pressable-scale';
 import { fontFamily, fontWeight, palette, spacing } from '@/design';
 import { usePaginatedResource } from '@/hooks/use-paginated-resource';
-import { PressableScale } from '@/components/ui/pressable-scale';
 
-type StoryItem = {
+export type StorefrontStory = {
   id: number;
-  type: 'story';
   title: string;
   slug: string;
   excerpt?: string | null;
@@ -20,81 +19,25 @@ type StoryItem = {
   duration?: number | null;
   link_url?: string | null;
   link_label?: string | null;
-  published_at?: string | null;
-  author?: { name?: string | null; avatar_url?: string | null } | null;
-  game?: {
-    id: number;
-    name: string;
-    slug: string;
-    cover_url?: string | null;
-    logo_url?: string | null;
-  } | null;
-};
-type StoryBubble = {
-  key: string;
-  slug: string;
-  name: string;
-  avatar?: string | null;
+  channel_name?: string | null;
+  channel_avatar_url?: string | null;
 };
 
 const fallback = require('../../../assets/images/logo-glow.png');
-const sessionSeenStories = new Set<string>();
+const sessionSeenStories = new Set<number>();
 
-function slugOf(item: StoryItem) {
-  return item.slug;
-}
-
-function mediaOf(item: StoryItem) {
-  return item.thumbnail_url
-    || item.media_url
-    || item.game?.cover_url
-    || item.game?.logo_url;
-}
-
-function identityOf(item: StoryItem) {
-  const gameKey = item.game?.slug || item.game?.id;
-  if (gameKey) return 'game-' + gameKey;
-
-  return 'author-' + (item.author?.name || item.id);
-}
-
-function avatarOf(item: StoryItem) {
-  return item.author?.avatar_url
-    || item.game?.logo_url
-    || item.game?.cover_url
-    || mediaOf(item);
-}
-
-function nameOf(item: StoryItem) {
-  return item.author?.name
-    || item.game?.name
-    || 'PlayNexus';
+function thumbnailOf(story: StorefrontStory) {
+  if (story.thumbnail_url) return story.thumbnail_url;
+  if (story.media_type === 'image') return story.media_url;
+  return story.channel_avatar_url;
 }
 
 export function StoryTray() {
-  const stories = usePaginatedResource<StoryItem>('/stories?per_page=18', 45_000);
-  const [, setSeenVersion] = useState(0);
+  const stories = usePaginatedResource<StorefrontStory>('/stories?per_page=20', 45_000);
+  const [, bumpSeen] = useState(0);
+  const items = (stories.data.data || []).slice(0, 20);
 
-  const bubbles = useMemo<StoryBubble[]>(() => {
-    const seen = new Set<string>();
-
-    return (stories.data.data || []).reduce<StoryBubble[]>((result, item) => {
-      const key = identityOf(item);
-      if (seen.has(key)) return result;
-
-      seen.add(key);
-      result.push({
-        key,
-        slug: slugOf(item),
-        name: nameOf(item),
-        avatar: avatarOf(item),
-      });
-
-      return result;
-    }, []).slice(0, 12);
-  }, [stories.data.data]);
-
-  if (!bubbles.length && !stories.loading) return null;
+  if (!items.length && !stories.loading) return null;
 
   return (
     <View style={styles.root}>
@@ -102,21 +45,23 @@ export function StoryTray() {
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.rail}>
-        {stories.loading && !bubbles.length
-          ? Array.from({ length: 6 }).map((_, index) => (
-              <View key={index} style={styles.bubble}>
+        {stories.loading && !items.length
+          ? Array.from({ length: 7 }).map((_, index) => (
+              <View key={index} style={styles.item}>
                 <View style={styles.skeletonRing}>
                   <View style={styles.skeletonAvatar} />
                 </View>
                 <View style={styles.skeletonLabel} />
               </View>
             ))
-          : bubbles.map((story) => {
-              const seen = sessionSeenStories.has(story.key);
-              const avatar = (
+          : items.map((story) => {
+              const seen = sessionSeenStories.has(story.id);
+              const thumbnail = thumbnailOf(story);
+
+              const media = (
                 <View style={styles.ringInner}>
                   <Image
-                    source={story.avatar ? { uri: String(story.avatar) } : fallback}
+                    source={thumbnail ? { uri: String(thumbnail) } : fallback}
                     style={styles.avatar}
                     contentFit="cover"
                     cachePolicy="memory-disk"
@@ -126,30 +71,43 @@ export function StoryTray() {
 
               return (
                 <PressableScale
-                  key={story.key}
+                  key={story.id}
                   haptic
                   pressedScale={0.96}
                   onPress={() => {
-                    sessionSeenStories.add(story.key);
-                    setSeenVersion((value) => value + 1);
+                    sessionSeenStories.add(story.id);
+                    bumpSeen((value) => value + 1);
                     router.push({
                       pathname: '/stories',
                       params: { start: story.slug },
                     });
                   }}
-                  style={styles.bubble}>
+                  style={styles.item}>
                   {seen ? (
-                    <View style={styles.seenRing}>{avatar}</View>
+                    <View style={styles.seenRing}>
+                      {media}
+                    </View>
                   ) : (
                     <LinearGradient
                       colors={[palette.warning, palette.magenta, palette.violet]}
                       start={{ x: 0, y: 1 }}
                       end={{ x: 1, y: 0 }}
                       style={styles.ring}>
-                      {avatar}
+                      {media}
                     </LinearGradient>
                   )}
-                  <Text numberOfLines={1} style={[styles.label, seen && styles.labelSeen]}>{story.name}</Text>
+
+                  {!seen ? (
+                    <View style={styles.newBadge}>
+                      <Text style={styles.newBadgeText}>جدید</Text>
+                    </View>
+                  ) : null}
+
+                  <Text
+                    numberOfLines={1}
+                    style={[styles.label, seen && styles.labelSeen]}>
+                    {story.title}
+                  </Text>
                 </PressableScale>
               );
             })}
@@ -161,45 +119,69 @@ export function StoryTray() {
 const styles = StyleSheet.create({
   root: {
     paddingBottom: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.055)',
   },
   rail: {
     paddingHorizontal: 12,
+    paddingTop: 5,
+    paddingBottom: 3,
     gap: 10,
   },
-  bubble: {
-    width: 72,
+  item: {
+    width: 68,
     alignItems: 'center',
   },
   ring: {
-    width: 66,
-    height: 66,
-    borderRadius: 66,
-    padding: 2.2,
+    width: 62,
+    height: 62,
+    borderRadius: 62,
+    padding: 2.5,
   },
   seenRing: {
-    width: 66,
-    height: 66,
-    borderRadius: 66,
-    padding: 2.2,
-    backgroundColor: 'rgba(255,255,255,0.22)',
+    width: 62,
+    height: 62,
+    borderRadius: 62,
+    padding: 2.5,
+    backgroundColor: 'rgba(100,116,139,0.72)',
   },
   ringInner: {
     flex: 1,
-    borderRadius: 64,
-    padding: 2.2,
+    borderRadius: 60,
+    padding: 2.3,
     backgroundColor: palette.ink,
   },
   avatar: {
     flex: 1,
-    borderRadius: 60,
+    borderRadius: 56,
     backgroundColor: palette.surface,
   },
+  newBadge: {
+    position: 'absolute',
+    top: 48,
+    minWidth: 28,
+    height: 14,
+    paddingHorizontal: 4,
+    borderRadius: 7,
+    borderWidth: 1.5,
+    borderColor: palette.ink,
+    backgroundColor: palette.magenta,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  newBadgeText: {
+    color: palette.white,
+    fontFamily: fontFamily.black,
+    fontWeight: fontWeight.black,
+    fontSize: 6,
+    lineHeight: 8,
+  },
   label: {
-    width: 70,
-    marginTop: 5,
+    width: 66,
+    marginTop: 7,
     color: palette.text,
-    fontFamily: fontFamily.medium,
-    fontWeight: fontWeight.medium,
+    fontFamily: fontFamily.bold,
+    fontWeight: fontWeight.bold,
     fontSize: 9,
     lineHeight: 13,
     textAlign: 'center',
@@ -208,22 +190,22 @@ const styles = StyleSheet.create({
     color: palette.textMuted,
   },
   skeletonRing: {
-    width: 66,
-    height: 66,
-    borderRadius: 66,
+    width: 62,
+    height: 62,
+    borderRadius: 62,
     padding: 3,
     backgroundColor: 'rgba(255,255,255,0.08)',
   },
   skeletonAvatar: {
     flex: 1,
-    borderRadius: 60,
+    borderRadius: 56,
     backgroundColor: 'rgba(255,255,255,0.05)',
   },
   skeletonLabel: {
-    width: 45,
+    width: 44,
     height: 7,
     borderRadius: 7,
-    marginTop: 7,
+    marginTop: 8,
     backgroundColor: 'rgba(255,255,255,0.07)',
   },
 });
