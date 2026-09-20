@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 
 import { ContentCard } from '@/components/cards/content-card';
+import { CommentsSection } from '@/components/community/comments-section';
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { Screen } from '@/components/ui/screen';
 import { fontWeight, layout, palette, radii, spacing, typeScale } from '@/design';
@@ -107,6 +108,8 @@ export default function ContentDetailScreen() {
           <ActionBar content={content} />
 
           {body ? <Text style={styles.article}>{body}</Text> : null}
+
+          <CommentsSection slug={content.slug} enabled={content.allow_comments !== false} />
 
           {(data.related || []).length ? (
             <View style={styles.related}>
