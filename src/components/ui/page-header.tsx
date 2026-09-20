@@ -54,7 +54,7 @@ const styles = StyleSheet.create({
   root: {
     paddingHorizontal: layout.screenPadding,
     paddingTop: spacing.sm,
-    paddingBottom: spacing.lg,
+    paddingBottom: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -85,8 +85,8 @@ const styles = StyleSheet.create({
   },
   title: {
     color: palette.white,
-    fontSize: typeScale.displaySm,
-    lineHeight: 36,
+    fontSize: 29,
+    lineHeight: 34,
     fontWeight: fontWeight.black,
     textAlign: 'right',
     letterSpacing: -0.7,
@@ -97,8 +97,8 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   searchButton: {
-    width: 46,
-    height: 46,
+    width: 44,
+    height: 44,
     borderRadius: 17,
     overflow: 'hidden',
     borderWidth: 1,
@@ -124,8 +124,8 @@ const styles = StyleSheet.create({
     transform: [{ rotate: '45deg' }, { translateX: 6 }, { translateY: 5 }],
   },
   brandMark: {
-    width: 46,
-    height: 46,
+    width: 44,
+    height: 44,
     borderRadius: 17,
     borderWidth: 1,
     borderColor: 'rgba(88,244,255,0.20)',
@@ -151,8 +151,8 @@ const styles = StyleSheet.create({
     backgroundColor: palette.cyan,
   },
   avatarHalo: {
-    width: 46,
-    height: 46,
+    width: 44,
+    height: 44,
     borderRadius: 17,
     padding: 2,
     borderWidth: 1,
