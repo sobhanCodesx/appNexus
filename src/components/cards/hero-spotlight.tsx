@@ -32,7 +32,7 @@ export function HeroSpotlight({
   onPress?: () => void;
 }) {
   const { width, height } = useWindowDimensions();
-  const heroHeight = Math.max(408, Math.min(438, height * 0.50));
+  const heroHeight = Math.max(350, Math.min(392, height * 0.44));
   const x = useSharedValue(0);
   const y = useSharedValue(0);
 
@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
   },
   copy: {
     marginTop: 'auto',
-    padding: spacing.lg,
+    padding: spacing.md,
     alignItems: 'flex-end',
   },
   eyebrowRow: {
@@ -268,8 +268,8 @@ const styles = StyleSheet.create({
   },
   title: {
     color: palette.white,
-    fontSize: 30,
-    lineHeight: 38,
+    fontSize: 25,
+    lineHeight: 32,
     fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
     textAlign: 'right',
@@ -279,8 +279,8 @@ const styles = StyleSheet.create({
   },
   description: {
     color: 'rgba(245,248,252,0.72)',
-    fontSize: typeScale.bodySm,
-    lineHeight: 23,
+    fontSize: typeScale.caption,
+    lineHeight: 20,
     fontFamily: fontFamily.regular,
     textAlign: 'right',
     marginTop: spacing.sm,
@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
   },
   bottomRow: {
     width: '100%',
-    marginTop: spacing.lg,
+    marginTop: spacing.md,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
