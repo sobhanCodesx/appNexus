@@ -51,6 +51,7 @@ export default function HomeScreen() {
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.quickRow}>
                   <Chip label="رادار انتشار" onPress={() => router.push('/(tabs)/radar')} />
                   <Chip label="ویدیوهای تازه" onPress={() => router.push('/(tabs)/videos')} />
+                  <Chip label="Shorts" onPress={() => router.push('/shorts')} />
                   <Chip label="Explore" onPress={() => router.push('/(tabs)/explore')} />
                   <Chip label="فروشگاه" onPress={() => router.push('/store')} />
                   <Chip label="پیشنهادهای ویژه" onPress={() => router.push('/store?mode=offers')} />
