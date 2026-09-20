@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/images/playnexus-app-icon.png",
     "scheme": "playnexus",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "dark",
     "ios": {
       "icon": "./assets/images/playnexus-app-icon.png",
       "bundleIdentifier": "com.playnexus.app",
@@ -24,7 +24,7 @@
         "foregroundImage": "./assets/images/playnexus-adaptive-foreground.png",
         "monochromeImage": "./assets/images/playnexus-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": true
     },
     "web": {
       "output": "static",
@@ -45,8 +45,14 @@
         "expo-notifications",
         {
           "icon": "./assets/images/playnexus-notification.png",
-          "color": "#208AEF",
+          "color": "#4DA3FF",
           "defaultChannel": "default"
+        }
+      ],
+      [
+        "expo-video",
+        {
+          "supportsPictureInPicture": true
         }
       ]
     ],
