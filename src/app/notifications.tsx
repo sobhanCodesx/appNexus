@@ -5,11 +5,10 @@ import { StyleSheet, Text, View } from 'react-native';
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { Screen } from '@/components/ui/screen';
 import { fontWeight, layout, palette, radii, spacing, typeScale } from '@/design';
-import { useApiResource } from '@/hooks/use-api-resource';
+import { usePaginatedResource } from '@/hooks/use-paginated-resource';
 import { apiRequest } from '@/services/api';
 import { nativeHrefFromUrl } from '@/services/native-navigation';
 import { invalidateResource } from '@/services/resource-cache';
-import type { Paginated } from '@/types/api';
 
 type NotificationItem = {
   id: string;
@@ -23,7 +22,8 @@ type NotificationItem = {
 };
 
 export default function NotificationsScreen() {
-  const { data, refreshing, refresh } = useApiResource<Paginated<NotificationItem>>('/notifications', { data: [] });
+  const { data, refreshing, refresh, loadMore, loadingMore } =
+    usePaginatedResource<NotificationItem>('/notifications');
 
   const readAll = async () => {
     await apiRequest('/notifications/read-all', { method: 'PATCH' });
@@ -78,6 +78,9 @@ export default function NotificationsScreen() {
         )}
         refreshing={refreshing}
         onRefresh={refresh}
+        onEndReached={() => void loadMore()}
+        onEndReachedThreshold={0.45}
+        ListFooterComponent={loadingMore ? <View style={styles.loading}><Text style={styles.loadingText}>اعلان‌های بیشتر…</Text></View> : null}
         contentContainerStyle={styles.content}
         ListEmptyComponent={<View style={styles.empty}><Text style={styles.emptyText}>فعلاً اعلان جدیدی نیست.</Text></View>}
       />
@@ -106,6 +109,8 @@ const styles = StyleSheet.create({
   notificationTitle: { color: palette.white, fontSize: typeScale.body, fontWeight: fontWeight.black, textAlign: 'right' },
   notificationBody: { color: palette.textMuted, fontSize: typeScale.bodySm, lineHeight: 21, textAlign: 'right', marginTop: 5 },
   notificationDate: { color: palette.textDim, fontSize: 10, marginTop: spacing.sm },
+  loading: { paddingVertical: spacing.lg, alignItems: 'center' },
+  loadingText: { color: palette.textDim, fontSize: 10 },
   empty: { paddingTop: 120, alignItems: 'center' },
   emptyText: { color: palette.textMuted },
 });
