@@ -8,6 +8,7 @@ import { PageHeader } from '@/components/ui/page-header';
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { Screen } from '@/components/ui/screen';
 import {
+  fontFamily,
   fontWeight,
   layout,
   palette,
@@ -385,6 +386,7 @@ const styles = StyleSheet.create({
   playerLabel: {
     color: palette.cyan,
     fontSize: 9,
+    fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
     letterSpacing: 1.2,
   },
@@ -392,12 +394,15 @@ const styles = StyleSheet.create({
     color: palette.white,
     fontSize: typeScale.titleLg,
     lineHeight: 33,
+    fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
     textAlign: 'right',
     marginTop: 5,
   },
   playerIdentity: {
     color: palette.textMuted,
+    fontFamily: fontFamily.regular,
+    fontFamily: fontFamily.regular,
     fontSize: typeScale.caption,
     marginTop: 4,
     textAlign: 'right',
@@ -457,12 +462,14 @@ const styles = StyleSheet.create({
   progressLabel: {
     color: palette.textDim,
     fontSize: 8,
+    fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
     letterSpacing: 1,
   },
   progressValue: {
     color: palette.white,
     fontSize: typeScale.caption,
+    fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
   },
   progressTrack: {
@@ -480,6 +487,7 @@ const styles = StyleSheet.create({
   cardSerial: {
     color: palette.textDim,
     fontSize: 8,
+    fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
     letterSpacing: 1,
     marginTop: spacing.md,
@@ -509,12 +517,14 @@ const styles = StyleSheet.create({
   },
   statKicker: {
     fontSize: 7,
+    fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
     letterSpacing: 0.8,
   },
   statValue: {
     color: palette.white,
     fontSize: typeScale.titleSm,
+    fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
     marginTop: spacing.sm,
   },
@@ -538,12 +548,14 @@ const styles = StyleSheet.create({
   sectionKicker: {
     color: palette.cyan,
     fontSize: 8,
+    fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
     letterSpacing: 1.1,
   },
   sectionTitle: {
     color: palette.white,
     fontSize: typeScale.title,
+    fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
     marginTop: 3,
   },
@@ -574,6 +586,7 @@ const styles = StyleSheet.create({
   menuSymbolText: {
     color: palette.cyan,
     fontSize: 19,
+    fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
   },
   menuCopy: {
@@ -583,6 +596,7 @@ const styles = StyleSheet.create({
   menuTitle: {
     color: palette.text,
     fontSize: typeScale.body,
+    fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
   },
   menuCaption: {
@@ -613,6 +627,7 @@ const styles = StyleSheet.create({
   dangerKicker: {
     color: palette.danger,
     fontSize: 8,
+    fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
     letterSpacing: 1,
     textAlign: 'right',
@@ -632,6 +647,7 @@ const styles = StyleSheet.create({
   logoutText: {
     color: palette.danger,
     fontSize: typeScale.bodySm,
+    fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
   },
   logoutArrow: {
@@ -687,6 +703,7 @@ const styles = StyleSheet.create({
   guestKicker: {
     color: palette.cyan,
     fontSize: 9,
+    fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
     letterSpacing: 1.2,
     marginTop: spacing.xxxl,
@@ -695,12 +712,14 @@ const styles = StyleSheet.create({
     color: palette.white,
     fontSize: typeScale.displaySm,
     lineHeight: 38,
+    fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
     textAlign: 'center',
     marginTop: spacing.sm,
   },
   guestText: {
     color: palette.textMuted,
+    fontFamily: fontFamily.regular,
     fontSize: typeScale.bodySm,
     lineHeight: 24,
     textAlign: 'center',
@@ -721,6 +740,7 @@ const styles = StyleSheet.create({
   primaryText: {
     color: palette.ink,
     fontSize: typeScale.body,
+    fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
   },
   primaryArrow: {
@@ -740,6 +760,7 @@ const styles = StyleSheet.create({
   guestSecondaryText: {
     color: palette.textMuted,
     fontSize: typeScale.bodySm,
+    fontFamily: fontFamily.bold,
     fontWeight: fontWeight.bold,
   },
 });
