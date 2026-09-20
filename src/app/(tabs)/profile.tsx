@@ -7,7 +7,8 @@ import { PageHeader } from '@/components/ui/page-header';
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { Screen } from '@/components/ui/screen';
 import { fontWeight, layout, palette, radii, spacing, typeScale } from '@/design';
-import { apiRequest, getAccessToken } from '@/services/api';
+import { apiRequest, getAccessToken, setAccessToken } from '@/services/api';
+import { invalidateResource } from '@/services/resource-cache';
 import type { ProfilePayload } from '@/types/api';
 
 export default function ProfileScreen() {
@@ -66,10 +67,26 @@ export default function ProfileScreen() {
           <Stat label="تکمیل پروفایل" value={String(profile?.profile_completion || 0) + '٪'} />
         </View>
 
-        <MenuRow title="ذخیره‌شده‌ها" caption="پست‌ها و ویدیوهایی که نگه داشتی" />
-        <MenuRow title="سفارش‌ها" caption="پیگیری خریدهای PlayNexus" />
-        <MenuRow title="بازی‌های دنبال‌شده" caption="سیگنال اصلی فید شخصی تو" />
-        <MenuRow title="اعلان‌ها" caption="تنظیم چیزهایی که واقعاً مهم‌اند" />
+        <MenuRow title="ذخیره‌شده‌ها" caption="پست‌ها و ویدیوهایی که نگه داشتی" onPress={() => router.push('/saved')} />
+        <MenuRow title="سفارش‌ها" caption="پیگیری خریدهای PlayNexus" onPress={() => router.push('/orders')} />
+        <MenuRow title="آدرس‌ها" caption="مدیریت آدرس‌های تحویل" onPress={() => router.push('/addresses')} />
+        <MenuRow title="فروشگاه" caption="محصولات، تخفیف‌ها و معاوضه" onPress={() => router.push('/store')} />
+        <MenuRow title="اعلان‌ها" caption="چیزهایی که واقعاً مهم‌اند" onPress={() => router.push('/notifications')} />
+        <MenuRow
+          title="خروج"
+          caption="خروج امن از این دستگاه"
+          danger
+          onPress={() => void (async () => {
+            try {
+              await apiRequest('/auth/logout', { method: 'POST' });
+            } finally {
+              await setAccessToken(null);
+              invalidateResource();
+              setProfile(null);
+              setGuest(true);
+            }
+          })()}
+        />
       </ScrollView>
     </Screen>
   );
@@ -84,12 +101,22 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
-function MenuRow({ title, caption }: { title: string; caption: string }) {
+function MenuRow({
+  title,
+  caption,
+  onPress,
+  danger = false,
+}: {
+  title: string;
+  caption: string;
+  onPress?: () => void;
+  danger?: boolean;
+}) {
   return (
-    <PressableScale style={styles.menu}>
+    <PressableScale style={styles.menu} onPress={onPress}>
       <View style={styles.chevron} />
       <View style={styles.menuCopy}>
-        <Text style={styles.menuTitle}>{title}</Text>
+        <Text style={[styles.menuTitle, danger && styles.menuTitleDanger]}>{title}</Text>
         <Text style={styles.menuCaption}>{caption}</Text>
       </View>
     </PressableScale>
@@ -171,6 +198,7 @@ const styles = StyleSheet.create({
   menuCopy: { flex: 1, alignItems: 'flex-end' },
   menuTitle: { color: palette.text, fontSize: typeScale.body, fontWeight: fontWeight.bold },
   menuCaption: { color: palette.textMuted, fontSize: typeScale.caption, marginTop: 4, textAlign: 'right' },
+  menuTitleDanger: { color: palette.danger },
   chevron: {
     width: 8,
     height: 8,
