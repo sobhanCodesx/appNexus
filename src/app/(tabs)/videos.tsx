@@ -17,16 +17,20 @@ import {
   spacing,
   typeScale,
 } from '@/design';
-import { useApiResource } from '@/hooks/use-api-resource';
-import type { ContentCard as ContentItem, Paginated } from '@/types/api';
+import { usePaginatedResource } from '@/hooks/use-paginated-resource';
+import type { ContentCard as ContentItem } from '@/types/api';
 
 export default function VideosScreen() {
-  const { data, refreshing, refresh } = useApiResource<Paginated<ContentItem>>(
-    '/videos',
-    { data: [] },
+  const {
+    items: videos,
+    refreshing,
+    refresh,
+    loadMore,
+    loadingMore,
+  } = usePaginatedResource<ContentItem>(
+    '/videos?per_page=16',
+    15_000,
   );
-
-  const videos = data.data || [];
   const featured = videos[0];
   const rest = videos.slice(1);
 
@@ -140,6 +144,13 @@ export default function VideosScreen() {
         }
         refreshing={refreshing}
         onRefresh={refresh}
+        onEndReached={() => void loadMore()}
+        onEndReachedThreshold={0.45}
+        ListFooterComponent={
+          loadingMore
+            ? <View style={styles.loadingMore}><Text style={styles.loadingMoreText}>ویدیوهای بیشتر…</Text></View>
+            : null
+        }
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
       />
@@ -301,6 +312,15 @@ const styles = StyleSheet.create({
   },
   rowCard: {
     flex: 1,
+  },
+  loadingMore: {
+    paddingVertical: spacing.xl,
+    alignItems: 'center',
+  },
+  loadingMoreText: {
+    color: palette.textDim,
+    fontSize: 10,
+    fontWeight: fontWeight.bold,
   },
   empty: {
     paddingTop: 100,
