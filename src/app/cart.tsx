@@ -66,9 +66,10 @@ function money(value: number) {
 }
 
 export default function CartScreen() {
-  const [, setLocal] = useState<LocalCartLine[]>([]);
+  const [local, setLocal] = useState<LocalCartLine[]>([]);
   const [resolved, setResolved] = useState<CartResponse>(emptyResponse);
   const [loading, setLoading] = useState(true);
+  const [verificationError, setVerificationError] = useState<string | null>(null);
 
   const resolve = async (lines: LocalCartLine[]) => {
     if (!lines.length) {
@@ -77,38 +78,22 @@ export default function CartScreen() {
     }
 
     try {
-      setResolved(await apiRequest<CartResponse>(
+      const snapshot = await apiRequest<CartResponse>(
         '/cart/resolve',
         {
           method: 'POST',
           body: JSON.stringify({ items: cartRequestItems(lines) }),
         },
-      ));
-    } catch {
-      setResolved({
-        ...emptyResponse,
-        items: lines.map((line, index) => ({
-          key: String(index),
-          product_id: line.product_id,
-          variant_id: line.variant_id,
-          title: line.title,
-          slug: '',
-          variant: line.variant_name,
-          quantity: line.quantity,
-          stock: 10,
-          regular_unit_price: line.unit_price || 0,
-          unit_price: line.unit_price || 0,
-          line_total: (line.unit_price || 0) * line.quantity,
-          cover_url: line.cover_url,
-        })),
-        summary: {
-          ...emptyResponse.summary,
-          subtotal: lines.reduce(
-            (sum, line) => sum + (line.unit_price || 0) * line.quantity,
-            0,
-          ),
-        },
-      });
+      );
+      setResolved(snapshot);
+      setVerificationError(null);
+    } catch (error) {
+      setResolved(emptyResponse);
+      setVerificationError(
+        error instanceof Error
+          ? error.message
+          : 'قیمت و موجودی از سرور تأیید نشد.',
+      );
     }
   };
 
@@ -164,7 +149,15 @@ export default function CartScreen() {
         contentContainerStyle={styles.scroll}>
         {loading ? <LoadingCart /> : null}
 
-        {!loading && !resolved.items.length ? (
+        {!loading && !resolved.items.length && local.length && verificationError ? (
+          <UnverifiedCart
+            lines={local}
+            error={verificationError}
+            onRetry={() => void resolve(local)}
+          />
+        ) : null}
+
+        {!loading && !resolved.items.length && !local.length ? (
           <EmptyCart />
         ) : null}
 
@@ -341,6 +334,41 @@ function LoadingCart() {
   );
 }
 
+function UnverifiedCart({
+  lines,
+  error,
+  onRetry,
+}: {
+  lines: LocalCartLine[];
+  error: string;
+  onRetry: () => void;
+}) {
+  return (
+    <View style={styles.unverified}>
+      <View style={styles.unverifiedSignal} />
+      <Text style={styles.unverifiedKicker}>SERVER VERIFICATION REQUIRED</Text>
+      <Text style={styles.unverifiedTitle}>سبدت هست؛ قیمت هنوز تأیید نشده</Text>
+      <Text style={styles.unverifiedText}>
+        برای امنیت خرید، PlayNexus وقتی سرور در دسترس نیست هیچ قیمت یا موجودی حدسی نمایش نمی‌دهد.
+      </Text>
+      <View style={styles.unverifiedLines}>
+        {lines.map((line) => (
+          <View key={line.product_id + ':' + String(line.variant_id ?? 'base')} style={styles.unverifiedLine}>
+            <Text numberOfLines={1} style={styles.unverifiedLineTitle}>{line.title}</Text>
+            <Text style={styles.unverifiedLineMeta}>
+              {line.quantity.toLocaleString('fa-IR')} عدد · در انتظار تأیید
+            </Text>
+          </View>
+        ))}
+      </View>
+      <Text style={styles.unverifiedError}>{error}</Text>
+      <PressableScale onPress={onRetry} style={styles.retryButton}>
+        <Text style={styles.retryButtonText}>تلاش دوباره برای Sync</Text>
+      </PressableScale>
+    </View>
+  );
+}
+
 function EmptyCart() {
   return (
     <View style={styles.empty}>
@@ -447,6 +475,85 @@ const styles = StyleSheet.create({
   scroll: {
     paddingHorizontal: layout.screenPadding,
     paddingBottom: 136,
+  },
+  unverified: {
+    borderRadius: radii.xxl,
+    borderWidth: 1,
+    borderColor: 'rgba(255,190,85,0.24)',
+    backgroundColor: 'rgba(255,190,85,0.045)',
+    padding: spacing.lg,
+    overflow: 'hidden',
+  },
+  unverifiedSignal: {
+    position: 'absolute',
+    top: 0,
+    right: 22,
+    width: 64,
+    height: 2,
+    backgroundColor: palette.warning,
+  },
+  unverifiedKicker: {
+    color: palette.warning,
+    fontSize: 8,
+    fontWeight: fontWeight.black,
+    letterSpacing: 0.9,
+    textAlign: 'right',
+  },
+  unverifiedTitle: {
+    color: palette.white,
+    fontSize: typeScale.titleSm,
+    fontWeight: fontWeight.black,
+    textAlign: 'right',
+    marginTop: spacing.xs,
+  },
+  unverifiedText: {
+    color: palette.textMuted,
+    fontSize: typeScale.caption,
+    lineHeight: 20,
+    textAlign: 'right',
+    marginTop: spacing.xs,
+  },
+  unverifiedLines: {
+    marginTop: spacing.md,
+    gap: spacing.xs,
+  },
+  unverifiedLine: {
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: palette.line,
+    backgroundColor: 'rgba(255,255,255,0.025)',
+    padding: spacing.sm,
+    alignItems: 'flex-end',
+  },
+  unverifiedLineTitle: {
+    color: palette.text,
+    fontSize: typeScale.bodySm,
+    fontWeight: fontWeight.bold,
+    textAlign: 'right',
+  },
+  unverifiedLineMeta: {
+    color: palette.textDim,
+    fontSize: 9,
+    marginTop: 3,
+  },
+  unverifiedError: {
+    color: palette.warning,
+    fontSize: 10,
+    textAlign: 'right',
+    marginTop: spacing.md,
+  },
+  retryButton: {
+    minHeight: 46,
+    borderRadius: radii.md,
+    marginTop: spacing.md,
+    backgroundColor: palette.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  retryButtonText: {
+    color: palette.ink,
+    fontWeight: fontWeight.black,
+    fontSize: typeScale.bodySm,
   },
   overview: {
     minHeight: 156,
