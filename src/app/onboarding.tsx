@@ -17,6 +17,7 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
+  type SharedValue,
 } from 'react-native-reanimated';
 
 import { PressableScale } from '@/components/ui/pressable-scale';
@@ -149,7 +150,7 @@ function ProgressDot({
   progress,
 }: {
   index: number;
-  progress: Animated.SharedValue<number>;
+  progress: SharedValue<number>;
 }) {
   const style = useAnimatedStyle(() => {
     const distance = Math.abs(progress.value - index);
