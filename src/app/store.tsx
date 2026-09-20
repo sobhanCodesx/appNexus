@@ -1,8 +1,8 @@
 import { FlashList } from '@shopify/flash-list';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ProductCard, type ProductSummary } from '@/components/cards/product-card';
 import { Chip } from '@/components/ui/chip';
@@ -10,6 +10,7 @@ import { PageHeader } from '@/components/ui/page-header';
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { Screen } from '@/components/ui/screen';
 import {
+  fontFamily,
   fontWeight,
   layout,
   palette,
@@ -22,22 +23,53 @@ import { useApiResource } from '@/hooks/use-api-resource';
 import type { Paginated } from '@/types/api';
 
 type Mode = 'all' | 'offers' | 'exchange';
+type Sort = 'latest' | 'popular' | 'price_asc' | 'price_desc';
+
+type Category = {
+  id: number;
+  name: string;
+  slug: string;
+  products_count?: number;
+  children?: Category[];
+};
 
 export default function StoreScreen() {
-  const params = useLocalSearchParams<{ mode?: string }>();
-  const mode: Mode = params.mode === 'offers' || params.mode === 'exchange'
-    ? params.mode
-    : 'all';
+  const params = useLocalSearchParams<{ mode?: string; category?: string; sort?: string }>();
+  const mode: Mode = params.mode === 'offers' || params.mode === 'exchange' ? params.mode : 'all';
+  const initialSort: Sort =
+    params.sort === 'popular' || params.sort === 'price_asc' || params.sort === 'price_desc'
+      ? params.sort
+      : 'latest';
 
-  const path = mode === 'offers'
+  const [sort, setSort] = useState<Sort>(initialSort);
+  const [category, setCategory] = useState<string | null>(
+    typeof params.category === 'string' ? params.category : null,
+  );
+
+  const categories = useApiResource<{ categories: Category[] }>(
+    '/categories',
+    { categories: [] },
+    60_000,
+  );
+
+  const basePath = mode === 'offers'
     ? '/offers'
     : mode === 'exchange'
       ? '/exchange-products'
       : '/products';
 
+  const query = [
+    'sort=' + encodeURIComponent(sort),
+    category ? 'category=' + encodeURIComponent(category) : null,
+    'per_page=30',
+  ].filter(Boolean).join('&');
+
+  const path = basePath + '?' + query;
+
   const { data, refreshing, refresh } = useApiResource<Paginated<ProductSummary>>(
     path,
     { data: [] },
+    15_000,
   );
 
   const copy = useMemo(() => {
@@ -50,7 +82,6 @@ export default function StoreScreen() {
         tone: 'danger' as const,
       };
     }
-
     if (mode === 'exchange') {
       return {
         title: 'Trade',
@@ -60,7 +91,6 @@ export default function StoreScreen() {
         tone: 'cyan' as const,
       };
     }
-
     return {
       title: 'Store',
       kicker: 'PLAYNEXUS MARKET',
@@ -69,6 +99,11 @@ export default function StoreScreen() {
       tone: 'blue' as const,
     };
   }, [mode]);
+
+  const flatCategories = useMemo(
+    () => (categories.data.categories || []).flatMap((item) => [item, ...(item.children || [])]),
+    [categories.data.categories],
+  );
 
   return (
     <Screen>
@@ -87,48 +122,59 @@ export default function StoreScreen() {
 
             <View style={styles.modeBar}>
               <View style={styles.filters}>
-                <Chip
-                  label="همه"
-                  active={mode === 'all'}
-                  onPress={() => router.replace('/store')}
-                />
-                <Chip
-                  label="تخفیف"
-                  active={mode === 'offers'}
-                  onPress={() => router.replace('/store?mode=offers')}
-                />
-                <Chip
-                  label="معاوضه"
-                  active={mode === 'exchange'}
-                  onPress={() => router.replace('/store?mode=exchange')}
-                />
+                <Chip label="همه" active={mode === 'all'} onPress={() => router.replace('/store')} />
+                <Chip label="تخفیف" active={mode === 'offers'} onPress={() => router.replace('/store?mode=offers')} />
+                <Chip label="معاوضه" active={mode === 'exchange'} onPress={() => router.replace('/store?mode=exchange')} />
               </View>
 
-              <PressableScale
-                onPress={() => router.push('/cart')}
-                style={styles.cartButton}>
-                <View style={styles.cartGlyph}>
-                  <View style={styles.cartHandle} />
-                  <View style={styles.cartBody} />
-                </View>
+              <PressableScale onPress={() => router.push('/cart')} style={styles.cartButton}>
                 <Text style={styles.cartText}>سبد</Text>
+                <Text style={styles.cartSymbol}>▣</Text>
               </PressableScale>
+            </View>
+
+            <View style={styles.controlBlock}>
+              <View style={styles.controlHeading}>
+                <Text style={styles.controlKicker}>SORT</Text>
+                <Text style={styles.controlTitle}>مرتب‌سازی</Text>
+              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.controlRail}>
+                <Chip label="جدیدترین" active={sort === 'latest'} onPress={() => setSort('latest')} />
+                <Chip label="محبوب‌ترین" active={sort === 'popular'} onPress={() => setSort('popular')} />
+                <Chip label="ارزان‌ترین" active={sort === 'price_asc'} onPress={() => setSort('price_asc')} />
+                <Chip label="گران‌ترین" active={sort === 'price_desc'} onPress={() => setSort('price_desc')} />
+              </ScrollView>
+            </View>
+
+            <View style={styles.controlBlock}>
+              <View style={styles.controlHeading}>
+                <PressableScale haptic={false} onPress={() => router.push('/categories')}>
+                  <Text style={styles.allCategories}>همه دسته‌ها</Text>
+                </PressableScale>
+                <View style={styles.controlHeadingCopy}>
+                  <Text style={styles.controlKicker}>CATEGORY</Text>
+                  <Text style={styles.controlTitle}>فیلتر دسته‌بندی</Text>
+                </View>
+              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.controlRail}>
+                <Chip label="همه" active={!category} onPress={() => setCategory(null)} />
+                {flatCategories.map((item) => (
+                  <Chip
+                    key={item.id}
+                    label={item.name}
+                    active={category === item.slug}
+                    onPress={() => setCategory(item.slug)}
+                  />
+                ))}
+              </ScrollView>
             </View>
 
             <View style={styles.sectionCopy}>
               <Text style={styles.sectionKicker}>
-                {mode === 'all'
-                  ? 'AVAILABLE NOW'
-                  : mode === 'offers'
-                    ? 'HOT DEALS'
-                    : 'TRADE READY'}
+                {mode === 'all' ? 'AVAILABLE NOW' : mode === 'offers' ? 'HOT DEALS' : 'TRADE READY'}
               </Text>
               <Text style={styles.sectionTitle}>
-                {mode === 'all'
-                  ? 'محصولات'
-                  : mode === 'offers'
-                    ? 'پیشنهادهای ویژه'
-                    : 'قابل معاوضه'}
+                {(data.total ?? data.data.length).toLocaleString('fa-IR')} محصول
               </Text>
             </View>
           </>
@@ -146,19 +192,18 @@ export default function StoreScreen() {
           </View>
         )}
         refreshing={refreshing}
-        onRefresh={refresh}
+        onRefresh={() => {
+          void refresh();
+          void categories.refresh();
+        }}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <View style={styles.emptyMark}>
-              <View style={styles.emptyCore} />
-            </View>
+            <View style={styles.emptyMark}><View style={styles.emptyCore} /></View>
             <Text style={styles.emptyKicker}>NO STORE SIGNAL</Text>
-            <Text style={styles.emptyTitle}>فعلاً چیزی اینجا نیست</Text>
-            <Text style={styles.emptyText}>
-              فروشگاه به‌صورت زنده از PlayNexus به‌روزرسانی می‌شود.
-            </Text>
+            <Text style={styles.emptyTitle}>محصولی با این فیلتر نیست</Text>
+            <Text style={styles.emptyText}>فیلتر دسته یا مرتب‌سازی رو تغییر بده.</Text>
           </View>
         }
       />
@@ -189,16 +234,11 @@ function MarketHero({
     <View style={styles.marketHeroWrap}>
       <View style={styles.marketHero}>
         <LinearGradient
-          colors={[
-            accent + '24',
-            'rgba(167,123,255,0.06)',
-            'rgba(8,14,23,0.92)',
-          ]}
+          colors={[accent + '24', 'rgba(167,123,255,0.06)', 'rgba(8,14,23,0.92)']}
           start={{ x: 1, y: 0 }}
           end={{ x: 0, y: 1 }}
           style={StyleSheet.absoluteFill}
         />
-
         <View style={styles.heroGrid}>
           <View style={styles.heroRingLarge}>
             <View style={styles.heroRingSmall}>
@@ -208,19 +248,11 @@ function MarketHero({
             </View>
           </View>
         </View>
-
         <View style={styles.heroCopy}>
-          <View style={styles.heroKickerRow}>
-            <View style={[styles.heroDot, { backgroundColor: accent }]} />
-            <Text style={[styles.heroKicker, { color: accent }]}>
-              {copy.kicker}
-            </Text>
-          </View>
-
+          <Text style={[styles.heroKicker, { color: accent }]}>{copy.kicker}</Text>
           <Text style={styles.heroHeadline}>{copy.headline}</Text>
           <Text style={styles.heroBody}>{copy.body}</Text>
         </View>
-
         <View style={[styles.heroSignal, { backgroundColor: accent }]} />
       </View>
     </View>
@@ -228,16 +260,10 @@ function MarketHero({
 }
 
 const styles = StyleSheet.create({
-  content: {
-    paddingHorizontal: layout.screenPadding - 6,
-    paddingBottom: 90,
-  },
-  marketHeroWrap: {
-    paddingHorizontal: 6,
-    paddingBottom: spacing.lg,
-  },
+  content: { paddingHorizontal: layout.screenPadding - 6, paddingBottom: 90 },
+  marketHeroWrap: { paddingHorizontal: 6, paddingBottom: spacing.lg },
   marketHero: {
-    minHeight: 218,
+    minHeight: 202,
     borderRadius: radii.xxl,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.10)',
@@ -249,191 +275,57 @@ const styles = StyleSheet.create({
   heroGrid: {
     position: 'absolute',
     left: -22,
-    top: 24,
-    width: 160,
-    height: 160,
+    top: 22,
+    width: 150,
+    height: 150,
     alignItems: 'center',
     justifyContent: 'center',
   },
   heroRingLarge: {
-    width: 142,
-    height: 142,
-    borderRadius: 142,
+    width: 136,
+    height: 136,
+    borderRadius: 136,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.07)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   heroRingSmall: {
-    width: 86,
-    height: 86,
-    borderRadius: 86,
+    width: 82,
+    height: 82,
+    borderRadius: 82,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.11)',
     backgroundColor: 'rgba(3,5,9,0.22)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  heroSymbol: {
-    fontSize: 32,
-    fontWeight: fontWeight.black,
-  },
-  heroCopy: {
-    marginLeft: 118,
-    alignItems: 'flex-end',
-  },
-  heroKickerRow: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: 6,
-  },
-  heroDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 5,
-  },
-  heroKicker: {
-    fontSize: 8,
-    fontWeight: fontWeight.black,
-    letterSpacing: 1,
-  },
-  heroHeadline: {
-    color: palette.white,
-    fontSize: typeScale.title,
-    lineHeight: 29,
-    fontWeight: fontWeight.black,
-    textAlign: 'right',
-    marginTop: spacing.xs,
-  },
-  heroBody: {
-    color: palette.textMuted,
-    fontSize: typeScale.caption,
-    lineHeight: 20,
-    textAlign: 'right',
-    marginTop: spacing.xs,
-  },
-  heroSignal: {
-    position: 'absolute',
-    right: 24,
-    bottom: 0,
-    width: 68,
-    height: 2,
-  },
-  modeBar: {
-    paddingHorizontal: 6,
-    paddingBottom: spacing.xl,
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-  },
-  filters: {
-    flex: 1,
-    flexDirection: 'row-reverse',
-    flexWrap: 'wrap',
-    gap: spacing.xs,
-  },
-  cartButton: {
-    minWidth: 72,
-    height: 42,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: 'rgba(88,244,255,0.16)',
-    backgroundColor: 'rgba(88,244,255,0.05)',
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 7,
-    paddingHorizontal: spacing.sm,
-  },
-  cartGlyph: {
-    width: 18,
-    height: 18,
-  },
-  cartHandle: {
-    position: 'absolute',
-    top: 2,
-    left: 1,
-    width: 5,
-    height: 2,
-    backgroundColor: palette.cyan,
-    transform: [{ rotate: '18deg' }],
-  },
-  cartBody: {
-    position: 'absolute',
-    left: 4,
-    bottom: 2,
-    width: 12,
-    height: 10,
-    borderWidth: 1.3,
-    borderColor: palette.cyan,
-    borderRadius: 3,
-  },
-  cartText: {
-    color: palette.white,
-    fontSize: typeScale.caption,
-    fontWeight: fontWeight.black,
-  },
-  sectionCopy: {
-    paddingHorizontal: 6,
-    paddingBottom: spacing.sm,
-    alignItems: 'flex-end',
-  },
-  sectionKicker: {
-    color: palette.cyan,
-    fontSize: 8,
-    fontWeight: fontWeight.black,
-    letterSpacing: 1,
-  },
-  sectionTitle: {
-    color: palette.white,
-    fontSize: typeScale.title,
-    fontWeight: fontWeight.black,
-    marginTop: 3,
-  },
-  cell: {
-    padding: 6,
-  },
-  empty: {
-    paddingTop: 90,
-    alignItems: 'center',
-    paddingHorizontal: layout.screenPadding,
-  },
-  emptyMark: {
-    width: 76,
-    height: 76,
-    borderRadius: 76,
-    borderWidth: 1,
-    borderColor: 'rgba(88,244,255,0.14)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyCore: {
-    width: 18,
-    height: 18,
-    borderRadius: 6,
-    backgroundColor: palette.cyan,
-    transform: [{ rotate: '45deg' }],
-    ...shadow.cyanGlow,
-  },
-  emptyKicker: {
-    color: palette.cyan,
-    fontSize: 9,
-    fontWeight: fontWeight.black,
-    letterSpacing: 1,
-    marginTop: spacing.lg,
-  },
-  emptyTitle: {
-    color: palette.white,
-    fontSize: typeScale.title,
-    fontWeight: fontWeight.black,
-    marginTop: 5,
-  },
-  emptyText: {
-    color: palette.textMuted,
-    fontSize: typeScale.bodySm,
-    marginTop: spacing.sm,
-    textAlign: 'center',
-    maxWidth: 300,
-  },
+  heroSymbol: { fontSize: 31, fontWeight: fontWeight.black },
+  heroCopy: { marginLeft: 112, alignItems: 'flex-end' },
+  heroKicker: { fontFamily: fontFamily.black, fontSize: 8, fontWeight: fontWeight.black, letterSpacing: 1 },
+  heroHeadline: { color: palette.white, fontFamily: fontFamily.black, fontSize: typeScale.title, lineHeight: 29, fontWeight: fontWeight.black, textAlign: 'right', marginTop: spacing.xs },
+  heroBody: { color: palette.textMuted, fontFamily: fontFamily.regular, fontSize: typeScale.caption, lineHeight: 20, textAlign: 'right', marginTop: spacing.xs },
+  heroSignal: { position: 'absolute', right: 24, bottom: 0, width: 68, height: 2 },
+  modeBar: { paddingHorizontal: 6, paddingBottom: spacing.md, flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
+  filters: { flex: 1, flexDirection: 'row-reverse', flexWrap: 'wrap', gap: spacing.xs },
+  cartButton: { minWidth: 72, height: 42, borderRadius: radii.md, borderWidth: 1, borderColor: 'rgba(88,244,255,0.16)', backgroundColor: 'rgba(88,244,255,0.05)', flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', gap: 7, paddingHorizontal: spacing.sm },
+  cartText: { color: palette.white, fontFamily: fontFamily.black, fontSize: typeScale.caption, fontWeight: fontWeight.black },
+  cartSymbol: { color: palette.cyan, fontSize: 15 },
+  controlBlock: { paddingHorizontal: 6, paddingBottom: spacing.md },
+  controlHeading: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: spacing.xs },
+  controlHeadingCopy: { alignItems: 'flex-end' },
+  controlKicker: { color: palette.cyan, fontFamily: fontFamily.black, fontSize: 7, letterSpacing: 1 },
+  controlTitle: { color: palette.white, fontFamily: fontFamily.black, fontSize: 14, marginTop: 2 },
+  allCategories: { color: palette.cyan, fontFamily: fontFamily.bold, fontSize: 10 },
+  controlRail: { gap: spacing.xs, paddingRight: 1 },
+  sectionCopy: { paddingHorizontal: 6, paddingBottom: spacing.sm, alignItems: 'flex-end' },
+  sectionKicker: { color: palette.cyan, fontFamily: fontFamily.black, fontSize: 8, fontWeight: fontWeight.black, letterSpacing: 1 },
+  sectionTitle: { color: palette.white, fontFamily: fontFamily.black, fontSize: typeScale.title, fontWeight: fontWeight.black, marginTop: 3 },
+  cell: { padding: 6 },
+  empty: { paddingTop: 90, alignItems: 'center', paddingHorizontal: layout.screenPadding },
+  emptyMark: { width: 76, height: 76, borderRadius: 76, borderWidth: 1, borderColor: 'rgba(88,244,255,0.14)', alignItems: 'center', justifyContent: 'center' },
+  emptyCore: { width: 18, height: 18, borderRadius: 6, backgroundColor: palette.cyan, transform: [{ rotate: '45deg' }], ...shadow.cyanGlow },
+  emptyKicker: { color: palette.cyan, fontFamily: fontFamily.black, fontSize: 9, fontWeight: fontWeight.black, letterSpacing: 1, marginTop: spacing.lg },
+  emptyTitle: { color: palette.white, fontFamily: fontFamily.black, fontSize: typeScale.title, fontWeight: fontWeight.black, marginTop: 5 },
+  emptyText: { color: palette.textMuted, fontFamily: fontFamily.regular, fontSize: typeScale.bodySm, marginTop: spacing.sm, textAlign: 'center', maxWidth: 300 },
 });
