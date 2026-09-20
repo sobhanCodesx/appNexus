@@ -8,11 +8,13 @@ export function SectionHeader({
   eyebrow,
   action,
   onAction,
+  compact = false,
 }: {
   title: string;
   eyebrow?: string;
   action?: string;
   onAction?: () => void;
+  compact?: boolean;
 }) {
   return (
     <View style={styles.row}>
@@ -23,7 +25,7 @@ export function SectionHeader({
             <Text style={styles.eyebrow}>{eyebrow}</Text>
           </View>
         ) : null}
-        <Text style={styles.title}>{title}</Text>
+        <Text style={[styles.title, compact && styles.titleCompact]}>{title}</Text>
       </View>
 
       {action ? (
@@ -84,6 +86,11 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.black,
     textAlign: 'right',
     letterSpacing: -0.5,
+  },
+  titleCompact: {
+    fontSize: 23,
+    lineHeight: 29,
+    letterSpacing: -0.25,
   },
   actionWrap: {
     flexDirection: 'row',
