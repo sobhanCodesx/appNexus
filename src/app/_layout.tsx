@@ -17,6 +17,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ConnectivityBanner } from '@/components/system/connectivity-banner';
 import { palette } from '@/design';
 import { useNotificationNavigation } from '@/hooks/use-notification-navigation';
+import { getAppMeta } from '@/services/app-meta';
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -30,6 +31,10 @@ export default function RootLayout() {
     Vazirmatn_700Bold,
     Vazirmatn_900Black,
   });
+
+  useEffect(() => {
+    void getAppMeta().catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     if (fontsLoaded || fontError) {
