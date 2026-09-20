@@ -9,7 +9,20 @@ import type { ContentCard as ContentItem } from '@/types/api';
 const fallbackImage = require('../../../assets/images/logo-glow.png');
 
 function imageOf(item: ContentItem) {
-  const uri = item.thumbnail_url || item.image_url || item.cover_url || item.game?.cover_url;
+  const raw = item as ContentItem & {
+    media?: Array<{
+      type?: string | null;
+      url?: string | null;
+      thumbnail?: string | null;
+    }>;
+  };
+  const mediaImage = raw.media?.find((media) => media.thumbnail)?.thumbnail
+    || raw.media?.find((media) => media.type === 'image' && media.url)?.url;
+  const uri = item.thumbnail_url
+    || item.image_url
+    || item.cover_url
+    || mediaImage
+    || item.game?.cover_url;
   return uri ? { uri } : fallbackImage;
 }
 
