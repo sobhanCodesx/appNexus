@@ -54,7 +54,8 @@
         {
           "supportsPictureInPicture": true
         }
-      ]
+      ],
+      "expo-image-picker"
     ],
     "experiments": {
       "typedRoutes": true,
