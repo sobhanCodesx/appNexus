@@ -1,25 +1,45 @@
 import * as Device from 'expo-device';
-import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+import { isExpoGo } from '@/services/runtime';
 
 export type PushRegistration = {
   token: string;
   provider: 'fcm' | 'apns';
 };
 
+type DevicePushTokenLike = {
+  data?: unknown;
+};
+
+type NotificationLike = {
+  request?: {
+    content?: {
+      data?: Record<string, unknown>;
+    };
+  };
+};
+
+let handlerConfigured = false;
+
 export async function getPushRegistration(
-  devicePushToken?: Notifications.DevicePushToken,
+  devicePushToken?: DevicePushTokenLike,
 ): Promise<PushRegistration | null> {
-  if (!Device.isDevice) return null;
+  if (isExpoGo() || !Device.isDevice) return null;
+
+  const Notifications = await import('expo-notifications');
+
+  if (!handlerConfigured) {
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldPlaySound: true,
+        shouldSetBadge: true,
+        shouldShowBanner: true,
+        shouldShowList: true,
+      }),
+    });
+    handlerConfigured = true;
+  }
 
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('default', {
@@ -32,12 +52,22 @@ export async function getPushRegistration(
   }
 
   const current = await Notifications.getPermissionsAsync();
-  const permission = current.granted ? current : await Notifications.requestPermissionsAsync();
+  const permission = current.granted
+    ? current
+    : await Notifications.requestPermissionsAsync();
+
   if (!permission.granted) return null;
 
-  const nativeToken = devicePushToken ?? (await Notifications.getDevicePushTokenAsync());
-  if (typeof nativeToken.data !== 'string' || nativeToken.data.trim() === '') {
-    throw new Error('Native push token is unavailable on this device.');
+  const nativeToken = devicePushToken
+    ?? await Notifications.getDevicePushTokenAsync();
+
+  if (
+    typeof nativeToken.data !== 'string'
+    || nativeToken.data.trim() === ''
+  ) {
+    throw new Error(
+      'Native push token is unavailable on this device.',
+    );
   }
 
   return {
@@ -46,7 +76,9 @@ export async function getPushRegistration(
   };
 }
 
-export function notificationUrl(notification: Notifications.Notification): string | null {
-  const url = notification.request.content.data?.url;
+export function notificationUrl(
+  notification: NotificationLike,
+): string | null {
+  const url = notification.request?.content?.data?.url;
   return typeof url === 'string' ? url : null;
 }
