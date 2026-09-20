@@ -29,6 +29,7 @@ import type { ContentCard as ContentItem, SearchPayload } from '@/types/api';
 type Row =
   | { type: 'content'; id: string; data: ContentItem }
   | { type: 'channel'; id: string; data: Record<string, unknown> }
+  | { type: 'category'; id: string; data: Record<string, unknown> }
   | { type: 'product'; id: string; data: Record<string, unknown> };
 
 type Suggestion = {
@@ -108,6 +109,11 @@ export default function SearchScreen() {
           id: 'channel-' + String(data.id),
           data,
         })),
+        ...result.categories.map((data) => ({
+          type: 'category' as const,
+          id: 'category-' + String(data.id),
+          data,
+        })),
         ...result.products.map((data) => ({
           type: 'product' as const,
           id: 'product-' + String(data.id),
@@ -122,6 +128,7 @@ export default function SearchScreen() {
   const stats = useMemo(() => ({
     content: rows.filter((item) => item.type === 'content').length,
     games: rows.filter((item) => item.type === 'channel').length,
+    categories: rows.filter((item) => item.type === 'category').length,
     products: rows.filter((item) => item.type === 'product').length,
   }), [rows]);
 
@@ -199,6 +206,12 @@ export default function SearchScreen() {
               return;
             }
 
+            if (item.kind === 'category') {
+              const slug = item.url?.split('/').filter(Boolean).pop();
+              if (slug) router.push({ pathname: '/category/[slug]', params: { slug } });
+              return;
+            }
+
             if (item.kind === 'post' || item.kind === 'video' || item.kind === 'short') {
               const slug = item.url?.split('/').filter(Boolean).pop();
               if (slug) router.push({ pathname: '/content/[slug]', params: { slug } });
@@ -259,6 +272,8 @@ export default function SearchScreen() {
                   if (!slug) return;
                   if (item.type === 'channel') {
                     router.push({ pathname: '/channel/[slug]', params: { slug } });
+                  } else if (item.type === 'category') {
+                    router.push({ pathname: '/category/[slug]', params: { slug } });
                   } else {
                     router.push({ pathname: '/product/[slug]', params: { slug } });
                   }
@@ -269,7 +284,11 @@ export default function SearchScreen() {
 
                 <View style={styles.entityCopy}>
                   <Text style={styles.entityKind}>
-                    {item.type === 'channel' ? 'GAME CHANNEL' : 'STORE ITEM'}
+                    {item.type === 'channel'
+                      ? 'GAME CHANNEL'
+                      : item.type === 'category'
+                        ? 'CATEGORY'
+                        : 'STORE ITEM'}
                   </Text>
                   <Text numberOfLines={2} style={styles.entityTitle}>{title}</Text>
                 </View>
@@ -410,7 +429,7 @@ function ResultHeader({
 }: {
   term: string;
   loading: boolean;
-  stats: { content: number; games: number; products: number };
+  stats: { content: number; games: number; categories: number; products: number };
 }) {
   return (
     <View style={styles.resultHeader}>
@@ -425,6 +444,7 @@ function ResultHeader({
         <View style={styles.resultStats}>
           <MiniStat value={stats.content} label="CONTENT" />
           <MiniStat value={stats.games} label="GAMES" />
+          <MiniStat value={stats.categories} label="CATEGORY" />
           <MiniStat value={stats.products} label="STORE" />
         </View>
       ) : null}
