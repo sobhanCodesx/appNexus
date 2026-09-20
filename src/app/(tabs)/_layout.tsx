@@ -1,10 +1,10 @@
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { Tabs } from 'expo-router';
-import { Platform, StyleSheet } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 
 import { NavGlyph } from '@/components/ui/nav-glyph';
-import { fontWeight, layout, palette, typeScale } from '@/design';
+import { fontWeight, layout, palette, radii, shadow, typeScale } from '@/design';
 
 export default function TabsLayout() {
   return (
@@ -23,18 +23,34 @@ export default function TabsLayout() {
         tabBarLabelStyle: {
           fontSize: typeScale.micro,
           fontWeight: fontWeight.bold,
-          marginTop: 2,
+          marginTop: 3,
+        },
+        tabBarItemStyle: {
+          borderRadius: radii.lg,
+          marginVertical: 6,
         },
         tabBarStyle: {
           position: 'absolute',
-          height: layout.tabBarHeight + (Platform.OS === 'ios' ? 14 : 8),
-          borderTopWidth: 1,
-          borderTopColor: palette.line,
-          backgroundColor: Platform.OS === 'android' ? 'rgba(5,7,11,0.96)' : 'transparent',
-          paddingTop: 7,
+          left: 14,
+          right: 14,
+          bottom: Platform.OS === 'ios' ? 14 : 12,
+          height: layout.tabBarHeight + (Platform.OS === 'ios' ? 12 : 0),
+          borderTopWidth: 0,
+          borderWidth: 1,
+          borderColor: 'rgba(255,255,255,0.12)',
+          borderRadius: 28,
+          backgroundColor: Platform.OS === 'android' ? 'rgba(7,11,18,0.96)' : 'transparent',
+          paddingTop: 2,
+          paddingBottom: Platform.OS === 'ios' ? 8 : 2,
+          overflow: 'hidden',
+          ...shadow.soft,
         },
         tabBarBackground: () => (
-          <BlurView intensity={78} tint="dark" style={StyleSheet.absoluteFill} />
+          <View style={StyleSheet.absoluteFill}>
+            <BlurView intensity={92} tint="dark" style={StyleSheet.absoluteFill} />
+            <View style={styles.dockGlow} />
+            <View style={styles.topHairline} />
+          </View>
         ),
       }}>
       <Tabs.Screen name="index" options={{
@@ -60,3 +76,23 @@ export default function TabsLayout() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  dockGlow: {
+    position: 'absolute',
+    width: 180,
+    height: 80,
+    borderRadius: 90,
+    alignSelf: 'center',
+    top: -42,
+    backgroundColor: 'rgba(24,124,255,0.08)',
+  },
+  topHairline: {
+    position: 'absolute',
+    top: 0,
+    left: 30,
+    right: 30,
+    height: 1,
+    backgroundColor: 'rgba(88,244,255,0.16)',
+  },
+});
