@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { PressableScale } from '@/components/ui/pressable-scale';
-import { fontWeight, palette, radii, shadow, spacing, typeScale } from '@/design';
+import { fontWeight, palette, shadow, spacing, typeScale } from '@/design';
 import type { StudioCard as StudioItem } from '@/types/api';
 
 const fallbackImage = require('../../../assets/images/logo.png');
