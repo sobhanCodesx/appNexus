@@ -14,10 +14,21 @@ export function SectionHeader({
   return (
     <View style={styles.row}>
       <View style={styles.copy}>
-        {eyebrow ? <Text style={styles.eyebrow}>{eyebrow}</Text> : null}
+        {eyebrow ? (
+          <View style={styles.eyebrowRow}>
+            <View style={styles.eyebrowDot} />
+            <Text style={styles.eyebrow}>{eyebrow}</Text>
+          </View>
+        ) : null}
         <Text style={styles.title}>{title}</Text>
       </View>
-      {action ? <Text style={styles.action}>{action}</Text> : null}
+
+      {action ? (
+        <View style={styles.actionWrap}>
+          <Text style={styles.action}>{action}</Text>
+          <View style={styles.actionArrow} />
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -33,22 +44,49 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     flex: 1,
   },
+  eyebrowRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 5,
+  },
+  eyebrowDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 5,
+    backgroundColor: palette.cyan,
+  },
   eyebrow: {
-    color: palette.blue,
+    color: palette.textDim,
     fontSize: typeScale.micro,
-    fontWeight: fontWeight.bold,
-    letterSpacing: 1,
-    marginBottom: spacing.xxs,
+    fontWeight: fontWeight.black,
+    letterSpacing: 1.1,
   },
   title: {
-    color: palette.text,
-    fontSize: typeScale.title,
+    color: palette.white,
+    fontSize: typeScale.titleLg,
+    lineHeight: 32,
     fontWeight: fontWeight.black,
     textAlign: 'right',
+    letterSpacing: -0.5,
+  },
+  actionWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    paddingBottom: 3,
   },
   action: {
     color: palette.textMuted,
     fontSize: typeScale.caption,
-    fontWeight: fontWeight.semibold,
+    fontWeight: fontWeight.bold,
+  },
+  actionArrow: {
+    width: 7,
+    height: 7,
+    borderLeftWidth: 1.4,
+    borderBottomWidth: 1.4,
+    borderColor: palette.cyan,
+    transform: [{ rotate: '45deg' }],
   },
 });
