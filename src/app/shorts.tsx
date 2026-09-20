@@ -2,7 +2,7 @@ import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { VideoView, useVideoPlayer } from 'expo-video';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 
 import { PressableScale } from '@/components/ui/pressable-scale';
-import { fontWeight, palette, radii, spacing, typeScale } from '@/design';
+import { fontWeight, palette, spacing, typeScale } from '@/design';
 import { useApiResource } from '@/hooks/use-api-resource';
 import { ApiError, apiRequest } from '@/services/api';
 import type { ContentCard, Paginated } from '@/types/api';
@@ -28,12 +28,13 @@ export default function ShortsScreen() {
 
   const effectiveActiveId = activeId ?? data.data?.[0]?.id ?? null;
 
-  const onViewableItemsChanged = useRef(
+  const onViewableItemsChanged = useCallback(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
       const next = viewableItems.find((item) => item.isViewable)?.item as ContentCard | undefined;
       if (next) setActiveId(next.id);
     },
-  ).current;
+    [],
+  );
 
   return (
     <View style={styles.root}>
