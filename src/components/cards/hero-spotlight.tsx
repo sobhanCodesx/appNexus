@@ -29,7 +29,8 @@ export function HeroSpotlight({
   slide?: HomeSlide;
   onPress?: () => void;
 }) {
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
+  const heroHeight = Math.max(408, Math.min(438, height * 0.50));
   const x = useSharedValue(0);
   const y = useSharedValue(0);
 
@@ -67,11 +68,11 @@ export function HeroSpotlight({
 
   return (
     <GestureDetector gesture={gesture}>
-      <Animated.View style={[styles.outer, { width: width - 28 }, cardStyle]}>
+      <Animated.View style={[styles.outer, { width: width - 32 }, cardStyle]}>
         <PressableScale
           onPress={onPress}
           pressedScale={0.994}
-          style={styles.card}>
+          style={[styles.card, { height: heroHeight }]}>
           <Animated.View style={[StyleSheet.absoluteFill, imageStyle]}>
             <Image
               source={source}
@@ -155,7 +156,6 @@ const styles = StyleSheet.create({
     ...shadow.card,
   },
   card: {
-    height: 492,
     borderRadius: radii.xxl,
     overflow: 'hidden',
     backgroundColor: palette.surface,
@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(88,244,255,0.10)',
   },
   topRow: {
-    padding: spacing.lg,
+    padding: spacing.md,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 7,
     paddingHorizontal: 11,
-    height: 34,
+    height: 30,
     borderRadius: radii.pill,
     backgroundColor: 'rgba(3,5,9,0.56)',
     borderWidth: 1,
@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 7,
     paddingHorizontal: 11,
-    height: 34,
+    height: 30,
     borderRadius: radii.pill,
     backgroundColor: 'rgba(3,5,9,0.56)',
     borderWidth: 1,
@@ -238,7 +238,7 @@ const styles = StyleSheet.create({
   },
   copy: {
     marginTop: 'auto',
-    padding: spacing.xl,
+    padding: spacing.lg,
     alignItems: 'flex-end',
   },
   eyebrowRow: {
@@ -261,12 +261,13 @@ const styles = StyleSheet.create({
   },
   title: {
     color: palette.white,
-    fontSize: 34,
-    lineHeight: 42,
+    fontSize: 30,
+    lineHeight: 38,
     fontWeight: fontWeight.black,
     textAlign: 'right',
     letterSpacing: -0.8,
     maxWidth: 330,
+    writingDirection: 'rtl',
   },
   description: {
     color: 'rgba(245,248,252,0.72)',
@@ -275,10 +276,11 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     marginTop: spacing.sm,
     maxWidth: 320,
+    writingDirection: 'rtl',
   },
   bottomRow: {
     width: '100%',
-    marginTop: spacing.xl,
+    marginTop: spacing.lg,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
