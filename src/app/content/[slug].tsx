@@ -329,14 +329,14 @@ function ActionBar({
   const [reaction, setReaction] = useState(content.user_reaction || null);
   const [saved, setSaved] = useState(Boolean(content.is_saved));
 
-  const react = async () => {
+  const react = async (type: 'like' | 'dislike') => {
     try {
-      const next = reaction === 'like' ? null : 'like';
-      const response = await apiRequest<{ reaction: 'like' | null }>(
+      const next = reaction === type ? null : type;
+      const response = await apiRequest<{ reaction: 'like' | 'dislike' | null }>(
         '/contents/' + encodeURIComponent(content.slug) + '/reaction',
         {
           method: 'POST',
-          body: JSON.stringify({ type: 'like' }),
+          body: JSON.stringify({ type }),
         },
       );
       setReaction(response.reaction ?? next);
@@ -370,8 +370,17 @@ function ActionBar({
         label={reaction === 'like' ? 'پسندیدی' : 'پسند'}
         value={(content.likes_count || 0).toLocaleString('fa-IR')}
         active={reaction === 'like'}
-        onPress={() => void react()}
+        onPress={() => void react('like')}
       />
+      {content.type !== 'post' ? (
+        <ActionTile
+          symbol={reaction === 'dislike' ? '▼' : '▽'}
+          label={reaction === 'dislike' ? 'نپسندیدی' : 'نپسند'}
+          value={(content.dislikes_count || 0).toLocaleString('fa-IR')}
+          active={reaction === 'dislike'}
+          onPress={() => void react('dislike')}
+        />
+      ) : null}
       <ActionTile
         symbol={saved ? '◆' : '◇'}
         label={saved ? 'ذخیره شد' : 'ذخیره'}
