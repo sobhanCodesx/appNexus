@@ -61,6 +61,17 @@ export async function apiRequest<T>(
     }
 
     return payload as T;
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+
+    const timedOut = error instanceof Error && error.name === 'AbortError';
+    throw new ApiError(
+      timedOut
+        ? 'اتصال به PlayNexus API زمان‌بر شد. شبکه یا آدرس API را بررسی کن.'
+        : 'اتصال به PlayNexus API برقرار نشد. در تست محلی، گوشی و کامپیوتر باید روی یک شبکه باشند و Laravel از LAN قابل دسترس باشد.',
+      0,
+      { base_url: PLAYNEXUS_API_URL },
+    );
   } finally {
     clearTimeout(timeout);
   }
