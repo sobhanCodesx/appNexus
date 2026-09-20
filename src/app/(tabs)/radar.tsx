@@ -27,7 +27,7 @@ export default function RadarScreen() {
   );
   const [filter, setFilter] = useState<'all' | 'ps' | 'xbox'>('all');
 
-  const source = data.items || [];
+  const source = useMemo(() => data.items || [], [data.items]);
   const psCount = source.filter((item) => item.psn?.available).length;
   const xboxCount = source.filter((item) => item.xbox?.available).length;
 
