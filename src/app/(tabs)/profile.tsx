@@ -18,6 +18,7 @@ import {
   typeScale,
 } from '@/design';
 import { apiRequest, getAccessToken, setAccessToken } from '@/services/api';
+import { getInstallationId } from '@/services/installation';
 import { invalidateResource } from '@/services/resource-cache';
 import { registerNativePushDevice } from '@/services/push';
 import type { ProfilePayload } from '@/types/api';
@@ -152,10 +153,22 @@ export default function ProfileScreen() {
           title="فضای شخصی"
           items={[
             {
+              symbol: '✎',
+              title: 'ویرایش پروفایل',
+              caption: 'نام، موبایل، تولد و آواتار',
+              onPress: () => router.push('/account/edit'),
+            },
+            {
               symbol: '◇',
               title: 'ذخیره‌شده‌ها',
               caption: 'محتوایی که برای بعد نگه داشتی',
               onPress: () => router.push('/saved'),
+            },
+            {
+              symbol: '▶',
+              title: 'ادامه تماشا',
+              caption: 'پیشرفت ویدیوهایی که نیمه‌کاره موندن',
+              onPress: () => router.push('/watch-progress'),
             },
             {
               symbol: '▣',
@@ -183,16 +196,46 @@ export default function ProfileScreen() {
               onPress: () => router.push('/store'),
             },
             {
+              symbol: '≋',
+              title: 'Feed',
+              caption: 'برای تو، دنبال‌شده‌ها و بازی‌های ترند',
+              onPress: () => router.push('/feed'),
+            },
+            {
+              symbol: '◎',
+              title: 'Game Hubs',
+              caption: 'همه کانال‌های بازی',
+              onPress: () => router.push('/channels'),
+            },
+            {
+              symbol: '◆',
+              title: 'Studios',
+              caption: 'استودیوها و سازنده‌های بازی',
+              onPress: () => router.push('/studios'),
+            },
+            {
+              symbol: '▦',
+              title: 'دسته‌بندی‌ها',
+              caption: 'مرور ساختاری Store',
+              onPress: () => router.push('/categories'),
+            },
+            {
               symbol: '◌',
               title: 'اعلان‌ها',
               caption: 'سیگنال‌های مهم بازی‌ها و سفارش‌ها',
               onPress: () => router.push('/notifications'),
             },
             {
+              symbol: '☷',
+              title: 'تنظیم اعلان‌ها',
+              caption: 'SMS، ایمیل و Feed notifications',
+              onPress: () => router.push('/notification-preferences'),
+            },
+            {
               symbol: '⌁',
-              title: 'فعال‌سازی Push',
-              caption: 'اعلان native روی همین دستگاه',
-              onPress: () => void registerNativePushDevice(),
+              title: 'دستگاه‌ها و Push',
+              caption: 'ثبت یا حذف دستگاه‌های متصل',
+              onPress: () => router.push('/devices'),
             },
             {
               symbol: '?',
@@ -203,13 +246,37 @@ export default function ProfileScreen() {
           ]}
         />
 
+        <HubSection
+          kicker="ACCOUNT CONTROL"
+          title="امنیت و اتصال"
+          items={[
+            {
+              symbol: '⊙',
+              title: 'امنیت حساب',
+              caption: 'رمز عبور و خروج از همه دستگاه‌ها',
+              onPress: () => router.push('/account/security'),
+            },
+            {
+              symbol: '◉',
+              title: 'Session & API',
+              caption: 'توکن، نسخه API و قابلیت‌های فعال',
+              onPress: () => router.push('/session'),
+            },
+          ]}
+        />
+
         <View style={styles.dangerZone}>
           <Text style={styles.dangerKicker}>SESSION</Text>
           <PressableScale
             style={styles.logout}
             onPress={() => void (async () => {
               try {
-                await apiRequest('/auth/logout', { method: 'POST' });
+                await apiRequest('/auth/logout', {
+                  method: 'POST',
+                  body: JSON.stringify({
+                    installation_id: await getInstallationId(),
+                  }),
+                });
               } finally {
                 await setAccessToken(null);
                 invalidateResource();
