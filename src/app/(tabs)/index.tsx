@@ -67,18 +67,24 @@ const initial: HomePayload = {
 export default function HomeScreen() {
   const { data, loading, refreshing, error, refresh } = useApiResource<HomePayload>('/home', initial);
 
+  const storePicks = data.featured_products?.length
+    ? data.featured_products
+    : data.latest_products || [];
+
+  const dynamicSections = (data.content_sections || [])
+    .filter((section) => !['products', 'categories', 'games'].includes(section.content_type))
+    .slice(0, 2);
+
   const sections: Section[] = [
     'hero',
-    'pulse',
-    'portals',
     'feed',
-    ...(data.featured_products?.length ? ['featured-products' as const] : []),
-    ...(data.latest_products?.length ? ['latest-products' as const] : []),
-    ...(data.categories?.length ? ['categories' as const] : []),
-    ...(data.channels?.length ? ['channels' as const] : []),
+    'pulse',
     'radar',
+    'portals',
+    ...(storePicks.length ? ['featured-products' as const] : []),
     ...(data.fresh_content?.length ? ['fresh' as const] : []),
-    ...(data.content_sections || []).map((section) => `dynamic:${section.id}` as Section),
+    ...(data.channels?.length ? ['channels' as const] : []),
+    ...dynamicSections.map((section) => `dynamic:${section.id}` as Section),
     'studios',
   ];
   const feed = data.personalized_home?.feed?.length
@@ -91,8 +97,8 @@ export default function HomeScreen() {
   const followedGames = data.personalized_home?.followed_games || [];
 
   const primarySlide = data.slides?.[0];
-  const heroContent = primarySlide ? undefined : feed[0];
-  const heroSlide: HomeSlide | undefined = primarySlide ?? (heroContent
+  const heroContent = feed[0];
+  const heroSlide: HomeSlide | undefined = heroContent
     ? {
         id: heroContent.id,
         title: heroContent.title,
@@ -104,26 +110,33 @@ export default function HomeScreen() {
           || heroContent.image_url
           || heroContent.cover_url
           || heroContent.game?.cover_url,
+        button_label: heroContent.type === 'video'
+          ? 'تماشا'
+          : heroContent.type === 'short'
+            ? 'ببین'
+            : 'بخون',
       }
-    : undefined);
+    : primarySlide;
 
   const feedItems = heroContent && feed.length > 1
     ? feed.slice(1)
     : feed;
 
   const openHero = () => {
+    if (heroContent) {
+      router.push({
+        pathname: '/content/[slug]',
+        params: { slug: heroContent.slug },
+      });
+      return;
+    }
+
     if (primarySlide?.button_url) {
       const href = nativeHrefFromUrl(primarySlide.button_url);
       if (href) router.push(href);
       return;
     }
 
-    if (heroContent) {
-      router.push({
-        pathname: '/content/[slug]',
-        params: { slug: heroContent.slug },
-      });
-    }
   };
 
   return (
@@ -172,6 +185,7 @@ export default function HomeScreen() {
                 <View style={styles.section}>
                   <View style={styles.headerPad}>
                     <SectionHeader
+                      compact
                       title="مسیر سریع"
                     eyebrow="JUMP IN"
                     action="همه‌چی نزدیکه"
@@ -180,6 +194,7 @@ export default function HomeScreen() {
 
                 <ScrollView
                   horizontal
+                  style={styles.rtlScroll}
                   decelerationRate="fast"
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={styles.portalRail}>
@@ -222,9 +237,11 @@ export default function HomeScreen() {
               <View style={styles.section}>
                 <View style={styles.headerPad}>
                   <SectionHeader
+                    compact
                     title="برای تو"
                     eyebrow="SMART FEED"
-                    action="تازه‌ها"
+                    action="مشاهده فید"
+                    onAction={() => router.push('/feed')}
                   />
                 </View>
 
@@ -234,6 +251,7 @@ export default function HomeScreen() {
                       <ContentCard
                         item={feedItems[0]}
                         featured
+                        home
                         width="100%"
                         onPress={() => router.push({
                           pathname: '/content/[slug]',
@@ -245,6 +263,7 @@ export default function HomeScreen() {
                     {feedItems.length > 1 ? (
                       <ScrollView
                         horizontal
+                        style={styles.rtlScroll}
                         decelerationRate="fast"
                         showsHorizontalScrollIndicator={false}
                         contentContainerStyle={styles.horizontalRow}>
@@ -252,6 +271,8 @@ export default function HomeScreen() {
                           <ContentCard
                             key={content.id}
                             item={content}
+                            home
+                            width={248}
                             onPress={() => router.push({
                               pathname: '/content/[slug]',
                               params: { slug: content.slug },
@@ -273,7 +294,7 @@ export default function HomeScreen() {
               <HomeProductRail
                 title="انتخاب PlayNexus"
                 eyebrow="FEATURED STORE"
-                items={data.featured_products || []}
+                items={storePicks}
                 onAll={() => router.push('/store')}
               />
             );
@@ -295,6 +316,7 @@ export default function HomeScreen() {
               <View style={styles.section}>
                 <View style={styles.headerPad}>
                   <SectionHeader
+                    compact
                     title="دسته‌بندی‌ها"
                     eyebrow="STORE MAP"
                     action="همه دسته‌ها"
@@ -303,6 +325,7 @@ export default function HomeScreen() {
                 </View>
                 <ScrollView
                   horizontal
+                  style={styles.rtlScroll}
                   decelerationRate="fast"
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={styles.entityRail}>
@@ -329,6 +352,7 @@ export default function HomeScreen() {
               <View style={styles.section}>
                 <View style={styles.headerPad}>
                   <SectionHeader
+                    compact
                     title="Game Hubs"
                     eyebrow="FOLLOW THE GAME"
                     action="همه کانال‌ها"
@@ -337,6 +361,7 @@ export default function HomeScreen() {
                 </View>
                 <ScrollView
                   horizontal
+                  style={styles.rtlScroll}
                   decelerationRate="fast"
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={styles.entityRail}>
@@ -363,21 +388,27 @@ export default function HomeScreen() {
               <View style={styles.section}>
                 <View style={styles.headerPad}>
                   <SectionHeader
+                    compact
                     title="روی رادار"
                     eyebrow="WHAT'S NEXT"
                     action="مشاهده همه"
+                    onAction={() => router.push('/(tabs)/radar')}
                   />
                 </View>
 
                 {radar.length ? (
                   <ScrollView
                     horizontal
+                    style={styles.rtlScroll}
+                    decelerationRate="fast"
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={styles.horizontalRow}>
                     {radar.slice(0, 8).map((game) => (
                       <RadarCard
                         key={String(game.id)}
                         item={game}
+                        compact
+                        width={228}
                         onPress={() => router.push('/(tabs)/radar')}
                       />
                     ))}
@@ -394,6 +425,7 @@ export default function HomeScreen() {
               <View style={styles.section}>
                 <View style={styles.headerPad}>
                   <SectionHeader
+                    compact
                     title="تازه وارد Nexus"
                     eyebrow="FRESH 14 DAYS"
                     action="کشف کن"
@@ -402,6 +434,7 @@ export default function HomeScreen() {
                 </View>
                 <ScrollView
                   horizontal
+                  style={styles.rtlScroll}
                   decelerationRate="fast"
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={styles.entityRail}>
@@ -423,15 +456,18 @@ export default function HomeScreen() {
             <View style={[styles.section, styles.lastSection]}>
               <View style={styles.headerPad}>
                 <SectionHeader
+                  compact
                   title="سازنده‌ها"
                   eyebrow="CREATORS"
-                  action="دنیای بازی‌ها"
+                  action="همه استودیوها"
+                  onAction={() => router.push('/studios')}
                 />
               </View>
 
               {(data.latest_studios || []).length ? (
                 <ScrollView
                   horizontal
+                  style={styles.rtlScroll}
                   decelerationRate="fast"
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={styles.studioRow}>
@@ -477,10 +513,11 @@ function HomeProductRail({
   return (
     <View style={styles.section}>
       <View style={styles.headerPad}>
-        <SectionHeader title={title} eyebrow={eyebrow} action="فروشگاه" onAction={onAll} />
+        <SectionHeader compact title={title} eyebrow={eyebrow} action="فروشگاه" onAction={onAll} />
       </View>
       <ScrollView
         horizontal
+        style={styles.rtlScroll}
         decelerationRate="fast"
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.productRail}>
@@ -488,7 +525,8 @@ function HomeProductRail({
           <ProductCard
             key={product.id}
             product={product}
-            width={202}
+            compact
+            width={184}
             onPress={() => router.push({
               pathname: '/product/[slug]',
               params: { slug: product.slug },
@@ -515,12 +553,20 @@ function HomeEntityCard({
 }) {
   return (
     <PressableScale style={styles.entityCard} onPress={onPress}>
-      <Image
-        source={imageUrl ? { uri: imageUrl } : require('../../../assets/images/logo-glow.png')}
-        style={StyleSheet.absoluteFill}
-        contentFit="cover"
-        cachePolicy="memory-disk"
-      />
+      {imageUrl ? (
+        <Image
+          source={{ uri: imageUrl }}
+          style={StyleSheet.absoluteFill}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+        />
+      ) : (
+        <View style={styles.entityFallback}>
+          <View style={styles.entityFallbackRing}>
+            <View style={styles.entityFallbackCore} />
+          </View>
+        </View>
+      )}
       <View style={styles.entityShade} />
       <View style={styles.entityCopy}>
         <Text style={styles.entityKicker}>{eyebrow}</Text>
@@ -561,6 +607,7 @@ function DynamicHomeSection({ section }: { section: HomeContentSection }) {
     <View style={styles.section}>
       <View style={styles.headerPad}>
         <SectionHeader
+          compact
           title={section.title}
           eyebrow={(section.subtitle || section.content_type).toUpperCase()}
           action="بیشتر"
@@ -568,6 +615,7 @@ function DynamicHomeSection({ section }: { section: HomeContentSection }) {
       </View>
       <ScrollView
         horizontal
+        style={styles.rtlScroll}
         decelerationRate="fast"
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={isProducts ? styles.productRail : styles.entityRail}>
@@ -578,7 +626,8 @@ function DynamicHomeSection({ section }: { section: HomeContentSection }) {
               <ProductCard
                 key={'p-' + product.id}
                 product={product}
-                width={202}
+                compact
+                width={184}
                 onPress={() => router.push({
                   pathname: '/product/[slug]',
                   params: { slug: product.slug },
@@ -696,7 +745,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   section: {
-    marginBottom: spacing.xxl,
+    marginBottom: spacing.xl,
   },
   lastSection: {
     marginBottom: spacing.massive,
@@ -713,8 +762,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: layout.screenPadding,
     paddingTop: spacing.sm,
   },
+  rtlScroll: {
+    direction: 'rtl',
+  },
   horizontalRow: {
-    gap: spacing.md,
+    gap: spacing.sm,
     paddingHorizontal: layout.screenPadding,
     paddingTop: spacing.sm,
   },
@@ -724,23 +776,49 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
   },
   productRail: {
-    gap: spacing.md,
+    gap: spacing.sm,
     paddingHorizontal: layout.screenPadding,
     paddingTop: spacing.sm,
   },
   entityRail: {
-    gap: spacing.md,
+    gap: spacing.sm,
     paddingHorizontal: layout.screenPadding,
     paddingTop: spacing.sm,
   },
   entityCard: {
-    width: 212,
-    height: 154,
+    width: 198,
+    height: 136,
     borderRadius: radii.xl,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: palette.line,
     backgroundColor: palette.surface,
+  },
+  entityFallback: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    backgroundColor: 'rgba(12,26,40,0.86)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  entityFallbackRing: {
+    width: 64,
+    height: 64,
+    borderRadius: 64,
+    borderWidth: 1,
+    borderColor: 'rgba(88,244,255,0.16)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  entityFallbackCore: {
+    width: 14,
+    height: 14,
+    borderRadius: 5,
+    backgroundColor: palette.cyan,
+    transform: [{ rotate: '45deg' }],
   },
   entityShade: {
     position: 'absolute',
