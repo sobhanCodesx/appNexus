@@ -155,7 +155,7 @@ export default function StoriesScreen() {
 
   const image = imageOf(item);
   const avatar = avatarOf(item);
-  const caption = item.excerpt || item.body || '';
+  const caption = item.excerpt || '';
   const activeWidth = progress.interpolate({
     inputRange: [0, 1],
     outputRange: ['0%', '100%'],
