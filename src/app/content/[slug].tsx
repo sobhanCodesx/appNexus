@@ -168,6 +168,7 @@ function formatPlayerTime(value: number) {
   return String(minutes) + ':' + String(seconds).padStart(2, '0');
 }
 
+/* eslint-disable react-hooks/immutability -- expo-video exposes an imperative native player API. */
 function NativeVideo({
   id,
   title,
@@ -186,10 +187,10 @@ function NativeVideo({
   const videoRef = useRef<VideoView>(null);
   const controlsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastProgressReport = useRef(0);
-  const neonRotation = useRef(new Animated.Value(0)).current;
-  const neonOpacity = useRef(new Animated.Value(0)).current;
-  const ambientMotion = useRef(new Animated.Value(0)).current;
-  const ambientOpacity = useRef(new Animated.Value(0.72)).current;
+  const [neonRotation] = useState(() => new Animated.Value(0));
+  const [neonOpacity] = useState(() => new Animated.Value(0));
+  const [ambientMotion] = useState(() => new Animated.Value(0));
+  const [ambientOpacity] = useState(() => new Animated.Value(0.72));
 
   const [posterVisible, setPosterVisible] = useState(true);
   const [controlsVisible, setControlsVisible] = useState(true);
@@ -684,6 +685,7 @@ function PlayerRoundButton({
   );
 }
 
+/* eslint-enable react-hooks/immutability */
 function PlaylistPanel({ playlist }: { playlist: VideoPlaylistContext }) {
   const items = playlist.items || [];
   const [open, setOpen] = useState(false);
