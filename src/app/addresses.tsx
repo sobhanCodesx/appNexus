@@ -228,12 +228,23 @@ export default function AddressesScreen() {
                       : 'TEHRAN NODE'}
                   </Text>
 
-                  <PressableScale
-                    haptic={false}
-                    onPress={() => void remove(address.id)}
-                    style={styles.deleteButton}>
-                    <Text style={styles.deleteText}>حذف</Text>
-                  </PressableScale>
+                  <View style={styles.addressActions}>
+                    <PressableScale
+                      haptic={false}
+                      onPress={() => router.push({
+                        pathname: '/address/[id]',
+                        params: { id: String(address.id) },
+                      })}
+                      style={styles.editButton}>
+                      <Text style={styles.editText}>ویرایش</Text>
+                    </PressableScale>
+                    <PressableScale
+                      haptic={false}
+                      onPress={() => void remove(address.id)}
+                      style={styles.deleteButton}>
+                      <Text style={styles.deleteText}>حذف</Text>
+                    </PressableScale>
+                  </View>
                 </View>
               </View>
 
@@ -755,6 +766,19 @@ const styles = StyleSheet.create({
     fontSize: 8,
     fontWeight: fontWeight.black,
     letterSpacing: 0.6,
+  },
+  addressActions: {
+    flexDirection: 'row-reverse',
+    gap: spacing.xs,
+  },
+  editButton: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 5,
+  },
+  editText: {
+    color: palette.cyan,
+    fontSize: 10,
+    fontWeight: fontWeight.bold,
   },
   deleteButton: {
     paddingHorizontal: spacing.sm,
