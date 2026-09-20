@@ -17,7 +17,11 @@ export default function VideosScreen() {
       <PageHeader title="ویدیو" subtitle="تماشا، ادامه بده، ذخیره کن" onSearch={() => router.push('/search')} />
       <FlashList
         data={data.data || []}
-        renderItem={({ item }) => <View style={styles.row}><ContentCard item={item} width="100%" /></View>}
+        renderItem={({ item }) => <View style={styles.row}><ContentCard
+              item={item}
+              width="100%"
+              onPress={() => router.push({ pathname: '/content/[slug]', params: { slug: item.slug } })}
+            /></View>}
         refreshing={refreshing}
         onRefresh={refresh}
         showsVerticalScrollIndicator={false}
