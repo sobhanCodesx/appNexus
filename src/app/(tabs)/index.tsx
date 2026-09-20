@@ -9,6 +9,7 @@ import { StudioCard } from '@/components/cards/studio-card';
 import { Chip } from '@/components/ui/chip';
 import { PageHeader } from '@/components/ui/page-header';
 import { Screen } from '@/components/ui/screen';
+import { SkeletonRail } from '@/components/ui/skeleton';
 import { SectionHeader } from '@/components/ui/section-header';
 import { fontWeight, layout, palette, radii, spacing, typeScale } from '@/design';
 import { useApiResource } from '@/hooks/use-api-resource';
@@ -128,10 +129,12 @@ export default function HomeScreen() {
 }
 
 function EmptyRail({ loading }: { loading: boolean }) {
+  if (loading) return <SkeletonRail />;
+
   return (
     <View style={styles.emptyRail}>
       <View style={styles.emptyGlow} />
-      <Text style={styles.emptyTitle}>{loading ? 'در حال همگام‌سازی…' : 'هنوز چیزی برای نمایش نیست'}</Text>
+      <Text style={styles.emptyTitle}>هنوز چیزی برای نمایش نیست</Text>
     </View>
   );
 }
