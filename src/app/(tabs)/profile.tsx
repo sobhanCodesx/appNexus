@@ -89,6 +89,7 @@ export default function ProfileScreen() {
                   source={{ uri: user.avatar_url }}
                   style={styles.avatar}
                   contentFit="cover"
+                cachePolicy="memory-disk"
                 />
               ) : (
                 <View style={styles.avatarFallback}>
