@@ -12,6 +12,7 @@ import Animated, {
 import { LivePulse } from '@/components/ui/motion-primitives';
 import { PressableScale } from '@/components/ui/pressable-scale';
 import {
+  fontFamily,
   fontWeight,
   palette,
   radii,
@@ -192,6 +193,7 @@ const styles = StyleSheet.create({
   indexText: {
     color: palette.white,
     fontSize: 10,
+    fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
   },
   indexLine: {
@@ -202,6 +204,7 @@ const styles = StyleSheet.create({
   indexCaption: {
     color: palette.textMuted,
     fontSize: 8,
+    fontFamily: fontFamily.bold,
     fontWeight: fontWeight.bold,
     letterSpacing: 1,
   },
@@ -234,6 +237,7 @@ const styles = StyleSheet.create({
   liveText: {
     color: palette.white,
     fontSize: 9,
+    fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
     letterSpacing: 1,
   },
@@ -257,6 +261,7 @@ const styles = StyleSheet.create({
   eyebrow: {
     color: palette.cyan,
     fontSize: 10,
+    fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
     letterSpacing: 1.2,
   },
@@ -264,6 +269,7 @@ const styles = StyleSheet.create({
     color: palette.white,
     fontSize: 30,
     lineHeight: 38,
+    fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
     textAlign: 'right',
     letterSpacing: -0.8,
@@ -274,6 +280,7 @@ const styles = StyleSheet.create({
     color: 'rgba(245,248,252,0.72)',
     fontSize: typeScale.bodySm,
     lineHeight: 23,
+    fontFamily: fontFamily.regular,
     textAlign: 'right',
     marginTop: spacing.sm,
     maxWidth: 320,
@@ -293,6 +300,7 @@ const styles = StyleSheet.create({
   signalMetaLabel: {
     color: palette.textDim,
     fontSize: 8,
+    fontFamily: fontFamily.bold,
     fontWeight: fontWeight.bold,
     letterSpacing: 1,
   },
@@ -324,6 +332,7 @@ const styles = StyleSheet.create({
   ctaText: {
     color: palette.ink,
     fontSize: typeScale.bodySm,
+    fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
   },
   ctaOrb: {
