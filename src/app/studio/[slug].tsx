@@ -4,12 +4,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { ContentCard } from '@/components/cards/content-card';
+import { ExpandableText } from '@/components/ui/expandable-text';
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { Screen } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section-header';
 import { fontWeight, layout, palette, radii, shadow, spacing, typeScale } from '@/design';
 import { useApiResource } from '@/hooks/use-api-resource';
-import type { Paginated } from '@/types/api';
+import type { ContentCard as ContentItem, Paginated } from '@/types/api';
 
 type StudioPayload = {
   studio: {
@@ -41,12 +43,14 @@ type StudioPayload = {
     channel_name?: string;
     videos_count?: number;
   }>;
+  latest_videos?: ContentItem[];
 };
 
 const empty: StudioPayload = {
   studio: { id: 0, name: '', slug: '' },
   channels: { data: [] },
   collections: { data: [] },
+  latest_videos: [],
 };
 
 export default function StudioScreen() {
@@ -133,7 +137,13 @@ export default function StudioScreen() {
               <View style={styles.aboutSignal} />
               <View style={styles.aboutCopy}>
                 <Text style={styles.aboutKicker}>ABOUT THE CREATOR</Text>
-                <Text style={styles.description}>{studio.description}</Text>
+                <ExpandableText
+                  text={studio.description}
+                  collapsedLines={5}
+                  threshold={260}
+                  style={styles.description}
+                  accent={palette.violet}
+                />
               </View>
             </View>
           ) : null}
@@ -206,6 +216,29 @@ export default function StudioScreen() {
                       <View style={styles.collectionFallback}><View style={styles.collectionFallbackCore} /></View>
                     )}
                   </PressableScale>
+                ))}
+              </View>
+            </View>
+          ) : null}
+
+          {(data.latest_videos || []).length ? (
+            <View style={styles.section}>
+              <SectionHeader title="۵ ویدیوی آخر" eyebrow="LATEST FROM STUDIO" action="WATCH" />
+              <View style={styles.videoList}>
+                {(data.latest_videos || []).slice(0, 5).map((video, index) => (
+                  <View key={video.id} style={styles.videoRow}>
+                    <View style={styles.videoIndex}>
+                      <Text style={styles.videoIndexText}>{String(index + 1).padStart(2, '0')}</Text>
+                      <View style={styles.videoIndexLine} />
+                    </View>
+                    <View style={styles.videoCard}>
+                      <ContentCard
+                        item={video}
+                        width="100%"
+                        onPress={() => router.push({ pathname: '/content/[slug]', params: { slug: video.slug } })}
+                      />
+                    </View>
+                  </View>
                 ))}
               </View>
             </View>
@@ -304,6 +337,12 @@ const styles = StyleSheet.create({
   collectionImage: { width: 76, height: 72, borderRadius: 17 },
   collectionFallback: { width: 76, height: 72, borderRadius: 17, backgroundColor: 'rgba(167,123,255,0.06)', alignItems: 'center', justifyContent: 'center' },
   collectionFallbackCore: { width: 15, height: 15, borderRadius: 5, backgroundColor: palette.violet, transform: [{ rotate: '45deg' }] },
+  videoList: { gap: spacing.md, paddingTop: spacing.md },
+  videoRow: { flexDirection: 'row', gap: spacing.sm },
+  videoIndex: { width: 30, paddingTop: spacing.sm, alignItems: 'center' },
+  videoIndexText: { color: palette.violet, fontSize: 9, fontWeight: fontWeight.black },
+  videoIndexLine: { width: 1, flex: 1, minHeight: 45, backgroundColor: 'rgba(167,123,255,0.12)', marginTop: spacing.xs },
+  videoCard: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   loadingOrbit: { width: 78, height: 78, borderRadius: 78, borderWidth: 1, borderColor: 'rgba(167,123,255,0.18)', alignItems: 'center', justifyContent: 'center' },
   loadingCore: { width: 15, height: 15, borderRadius: 5, backgroundColor: palette.violet, transform: [{ rotate: '45deg' }] },

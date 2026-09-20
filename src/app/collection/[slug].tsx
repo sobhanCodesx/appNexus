@@ -5,6 +5,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ContentCard } from '@/components/cards/content-card';
+import { ExpandableText } from '@/components/ui/expandable-text';
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { Screen } from '@/components/ui/screen';
 import {
@@ -130,7 +131,13 @@ export default function CollectionScreen() {
           {playlist.description ? (
             <View style={styles.descriptionWrap}>
               <View style={styles.descriptionSignal} />
-              <Text style={styles.description}>{playlist.description}</Text>
+              <ExpandableText
+                text={playlist.description}
+                collapsedLines={5}
+                threshold={240}
+                style={styles.description}
+                accent={palette.cyan}
+              />
             </View>
           ) : null}
 

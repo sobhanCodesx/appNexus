@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ContentCard } from '@/components/cards/content-card';
+import { ExpandableText } from '@/components/ui/expandable-text';
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { Screen } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section-header';
@@ -182,7 +183,13 @@ export default function ChannelScreen() {
               <View style={styles.aboutSignal} />
               <View style={styles.aboutCopy}>
                 <Text style={styles.aboutKicker}>ABOUT THIS GAME</Text>
-                <Text style={styles.description}>{channel.description}</Text>
+                <ExpandableText
+                  text={channel.description}
+                  collapsedLines={5}
+                  threshold={260}
+                  style={styles.description}
+                  accent={palette.cyan}
+                />
               </View>
             </View>
           ) : null}
@@ -235,9 +242,9 @@ export default function ChannelScreen() {
           ) : null}
 
           <View style={styles.section}>
-            <SectionHeader title="ویدیوهای بازی" eyebrow="LATEST WATCH" action={videoCountLabel} />
+            <SectionHeader title="۵ ویدیوی آخر" eyebrow="LATEST WATCH" action={videoCountLabel} />
             <View style={styles.videoList}>
-              {(data.videos.data || []).map((video, index) => (
+              {(data.videos.data || []).slice(0, 5).map((video, index) => (
                 <View key={video.id} style={styles.videoRow}>
                   <View style={styles.videoIndex}>
                     <Text style={styles.videoIndexText}>{String(index + 1).padStart(2, '0')}</Text>
