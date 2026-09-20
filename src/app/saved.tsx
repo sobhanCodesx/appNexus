@@ -6,11 +6,12 @@ import { ContentCard } from '@/components/cards/content-card';
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { Screen } from '@/components/ui/screen';
 import { fontWeight, layout, palette, spacing } from '@/design';
-import { useApiResource } from '@/hooks/use-api-resource';
-import type { ContentCard as ContentItem, Paginated } from '@/types/api';
+import { usePaginatedResource } from '@/hooks/use-paginated-resource';
+import type { ContentCard as ContentItem } from '@/types/api';
 
 export default function SavedScreen() {
-  const { data, refreshing, refresh } = useApiResource<Paginated<ContentItem>>('/saved', { data: [] });
+  const { data, refreshing, refresh, loadMore, loadingMore } =
+    usePaginatedResource<ContentItem>('/saved');
 
   return (
     <Screen>
@@ -35,6 +36,9 @@ export default function SavedScreen() {
         )}
         refreshing={refreshing}
         onRefresh={refresh}
+        onEndReached={() => void loadMore()}
+        onEndReachedThreshold={0.45}
+        ListFooterComponent={loadingMore ? <View style={styles.loading}><Text style={styles.loadingText}>بیشتر…</Text></View> : null}
         contentContainerStyle={styles.content}
         ListEmptyComponent={<View style={styles.empty}><Text style={styles.emptyText}>هنوز چیزی ذخیره نکردی.</Text></View>}
       />
@@ -51,6 +55,8 @@ const styles = StyleSheet.create({
   title: { color: palette.white, fontSize: 30, fontWeight: fontWeight.black, marginTop: 3 },
   content: { paddingHorizontal: layout.screenPadding, paddingBottom: 60 },
   card: { marginBottom: spacing.md },
+  loading: { paddingVertical: spacing.lg, alignItems: 'center' },
+  loadingText: { color: palette.textDim, fontSize: 10 },
   empty: { paddingTop: 120, alignItems: 'center' },
   emptyText: { color: palette.textMuted },
 });
