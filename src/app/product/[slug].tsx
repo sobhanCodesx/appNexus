@@ -126,6 +126,10 @@ export default function ProductScreen() {
     ?? product.pricing?.discount_amount
     ?? 0;
 
+  const effectiveStock = selectedVariant?.stock ?? product.stock;
+  const soldOut = product.availability === 'discontinued'
+    || (effectiveStock !== null && effectiveStock !== undefined && effectiveStock <= 0);
+
   const primaryImage = product.media?.find((item) => item.is_primary)?.url
     || product.media?.find((item) => item.type === 'image')?.url
     || product.game?.cover_url;
@@ -135,7 +139,7 @@ export default function ProductScreen() {
     : [{ id: -1, type: 'image', url: primaryImage || '' }];
 
   const add = async () => {
-    if (!product.id) return;
+    if (!product.id || soldOut) return;
 
     await addToCart({
       product_id: product.id,
@@ -446,12 +450,13 @@ export default function ProductScreen() {
           ) : null}
 
           <PressableScale
+            disabled={soldOut}
             onPress={() => void add()}
-            style={[styles.buy, added && styles.buyAdded]}>
-            <Text style={[styles.buyText, added && styles.buyTextAdded]}>
-              {added ? 'اضافه شد ✓' : 'افزودن به سبد'}
+            style={[styles.buy, added && styles.buyAdded, soldOut && styles.buyDisabled]}>
+            <Text style={[styles.buyText, added && styles.buyTextAdded, soldOut && styles.buyTextDisabled]}>
+              {soldOut ? 'فعلاً ناموجود' : added ? 'اضافه شد ✓' : 'افزودن به سبد'}
             </Text>
-            {!added ? <View style={styles.buyArrow} /> : null}
+            {!added && !soldOut ? <View style={styles.buyArrow} /> : null}
           </PressableScale>
 
           <View style={styles.dockPrice}>
@@ -904,6 +909,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
+  },
+  buyDisabled: {
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    borderWidth: 1,
+    borderColor: palette.line,
+  },
+  buyTextDisabled: {
+    color: palette.textDim,
   },
   buyAdded: {
     backgroundColor: 'rgba(80,232,176,0.13)',
