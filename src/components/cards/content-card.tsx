@@ -1,8 +1,10 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { PressableScale } from '@/components/ui/pressable-scale';
+import { VideoPreviewSurface, videoPreviewUrl } from '@/components/video/video-preview-surface';
 import { fontFamily, fontWeight, palette, radii, shadow, spacing, typeScale } from '@/design';
 import type { ContentCard as ContentItem } from '@/types/api';
 
@@ -32,18 +34,53 @@ export function ContentCard({
   onPress,
   featured = false,
   home = false,
+  previewActive = false,
 }: {
   item: ContentItem;
   width?: number | string;
   onPress?: () => void;
   featured?: boolean;
   home?: boolean;
+  previewActive?: boolean;
 }) {
   const duration = item.duration ? Math.max(1, Math.round(item.duration / 60)) : null;
+  const previewTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const consumedPreview = useRef(false);
+  const [touchPreview, setTouchPreview] = useState(false);
+  const hasPreview = item.type === 'video' && Boolean(videoPreviewUrl(item));
+  const effectivePreview = hasPreview && (previewActive || touchPreview);
+
+  const clearPreviewTimer = () => {
+    if (previewTimer.current) {
+      clearTimeout(previewTimer.current);
+      previewTimer.current = null;
+    }
+  };
 
   return (
     <PressableScale
-      onPress={onPress}
+      onPress={() => {
+        if (consumedPreview.current) {
+          consumedPreview.current = false;
+          setTouchPreview(false);
+          return;
+        }
+        onPress?.();
+      }}
+      onPressIn={() => {
+        if (!hasPreview) return;
+        clearPreviewTimer();
+        previewTimer.current = setTimeout(() => {
+          consumedPreview.current = true;
+          setTouchPreview(true);
+        }, 220);
+      }}
+      onPressOut={() => {
+        clearPreviewTimer();
+        if (touchPreview && !previewActive) {
+          setTimeout(() => setTouchPreview(false), 120);
+        }
+      }}
       pressedScale={0.982}
       style={[
         styles.card,
@@ -61,6 +98,8 @@ export function ContentCard({
         cachePolicy="memory-disk"
       />
 
+      <VideoPreviewSurface item={item} active={effectivePreview} compact={home} />
+
       <LinearGradient
         colors={[
           'rgba(3,5,9,0.00)',
@@ -71,7 +110,7 @@ export function ContentCard({
         style={StyleSheet.absoluteFill}
       />
 
-      <View style={styles.topMeta}>
+      <View style={[styles.topMeta, effectivePreview && styles.previewMeta]}>
         <View style={styles.typeBadge}>
           <View style={styles.typeDot} />
           <Text style={styles.typeText}>
@@ -157,6 +196,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  previewMeta: {
+    opacity: 0.38,
   },
   typeBadge: {
     height: 28,

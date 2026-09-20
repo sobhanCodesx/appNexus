@@ -63,6 +63,12 @@ export type ContentCard = {
   is_saved?: boolean;
   allow_comments?: boolean;
   published_at?: string | null;
+  media?: {
+    type?: string | null;
+    url?: ImageUrl;
+    thumbnail?: ImageUrl;
+    duration?: number | null;
+  }[];
   channel?: ContentChannel | null;
   game?: {
     id: number;

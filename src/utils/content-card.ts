@@ -56,6 +56,10 @@ export function normalizeContentCard(input: ContentCard): ContentCard {
     thumbnail_url:
       raw.thumbnail_url
       || mediaImage,
+    video_url:
+      raw.video_url
+      || videoMedia?.url
+      || null,
     duration:
       raw.duration
       ?? videoMedia?.duration
