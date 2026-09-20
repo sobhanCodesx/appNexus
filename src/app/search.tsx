@@ -53,8 +53,6 @@ export default function SearchScreen() {
     const q = term.trim();
 
     if (q.length < 2) {
-      setSuggestions([]);
-      setSuggesting(false);
       return;
     }
 
@@ -127,7 +125,6 @@ export default function SearchScreen() {
     products: rows.filter((item) => item.type === 'product').length,
   }), [rows]);
 
-  const hasResults = rows.length > 0;
   const showSuggestions = term.trim().length >= 2 && searchedTerm !== term.trim();
 
   return (
