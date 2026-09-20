@@ -5,7 +5,7 @@ import { Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { NavGlyph } from '@/components/ui/nav-glyph';
-import { fontWeight, layout, palette, radii, shadow } from '@/design';
+import { fontFamily, fontWeight, layout, palette, radii, shadow } from '@/design';
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
@@ -35,6 +35,7 @@ export default function TabsLayout() {
         sceneStyle: { backgroundColor: palette.ink },
         tabBarLabelStyle: {
           fontSize: 9,
+          fontFamily: fontFamily.bold,
           fontWeight: fontWeight.bold,
           marginTop: 1,
         },
