@@ -105,7 +105,7 @@ export default function ContentDetailScreen() {
             ) : null}
 
             <ChannelCard channel={data.channel} fallbackChannel={content.channel} type={content.type} />
-            <ActionBar content={content} />
+            <ActionBar key={content.id} content={content} />
 
             {isVideo && data.playlist ? <PlaylistPanel playlist={data.playlist} /> : null}
 
@@ -409,11 +409,6 @@ function ImageHero({ uri }: { uri?: string | null }) {
 function ActionBar({ content }: { content: ContentDetailPayload['content'] }) {
   const [reaction, setReaction] = useState(content.user_reaction || null);
   const [saved, setSaved] = useState(Boolean(content.is_saved));
-
-  useEffect(() => {
-    setReaction(content.user_reaction || null);
-    setSaved(Boolean(content.is_saved));
-  }, [content.id, content.is_saved, content.user_reaction]);
 
   const react = async (type: 'like' | 'dislike') => {
     try {

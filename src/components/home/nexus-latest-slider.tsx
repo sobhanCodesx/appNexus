@@ -64,13 +64,6 @@ export function NexusLatestSlider({ items }: { items: NexusLatestItem[] }) {
     return () => clearInterval(timer);
   }, [cardWidth, interacting, items.length]);
 
-  useEffect(() => {
-    if (active >= items.length) {
-      setActive(0);
-      scrollRef.current?.scrollTo({ x: 0, animated: false });
-    }
-  }, [active, items.length]);
-
   if (!items.length) return null;
 
   return (

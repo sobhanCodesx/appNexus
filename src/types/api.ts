@@ -193,14 +193,14 @@ export type HomeContentSection = {
   subtitle?: string | null;
   content_type: 'products' | 'categories' | 'games' | 'brands' | 'platforms' | 'posts' | 'videos' | 'shorts' | string;
   layout?: string | null;
-  items: Array<HomeProduct | ContentCard | {
+  items: (HomeProduct | ContentCard | {
     id: number;
     title: string;
     slug?: string | null;
     eyebrow?: string | null;
     excerpt?: string | null;
     image_url?: ImageUrl;
-  }>;
+  })[];
 };
 
 export type HomePayload = {

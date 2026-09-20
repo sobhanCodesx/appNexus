@@ -14,7 +14,7 @@ import type { ContentCard } from '@/types/api';
 type StoryItem = ContentCard & {
   body?: string | null;
   feed_slug?: string | null;
-  media?: Array<{ type?: string | null; url?: string | null; thumbnail?: string | null }>;
+  media?: { type?: string | null; url?: string | null; thumbnail?: string | null }[];
   author?: { name?: string | null; avatar_url?: string | null };
 };
 
@@ -42,8 +42,10 @@ export default function StoriesScreen() {
     if (!items.length || !start) return;
     const index = items.findIndex((item) => slugOf(item) === start);
     if (index >= 0) {
-      setActive(index);
-      requestAnimationFrame(() => list.current?.scrollToIndex({ index, animated: false }));
+      requestAnimationFrame(() => {
+        setActive(index);
+        list.current?.scrollToIndex({ index, animated: false });
+      });
     }
   }, [items, start]);
 
