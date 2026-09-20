@@ -22,6 +22,90 @@ import { usePaginatedResource } from '@/hooks/use-paginated-resource';
 
 const fallback = require('../../assets/images/logo-glow.png');
 const IMAGE_DURATION = 5000;
+const PLAYNEXUS_ORIGIN = 'https://playnexus.ir';
+
+function decodeSlug(value?: string) {
+  if (!value) return null;
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
+function nativeStoryTarget(rawUrl: string) {
+  const trimmed = rawUrl.trim();
+  if (!trimmed) return null;
+
+  let pathname = trimmed;
+  if (/^https?:\/\//i.test(trimmed)) {
+    try {
+      const parsed = new URL(trimmed);
+      if (!/(^|\.)playnexus\.ir$/i.test(parsed.hostname)) return null;
+      pathname = parsed.pathname;
+    } catch {
+      return null;
+    }
+  }
+
+  if (!pathname.startsWith('/')) return null;
+
+  const clean = pathname.split('?')[0].split('#')[0].replace(/\/+$/, '') || '/';
+  const parts = clean.split('/').filter(Boolean);
+  const section = parts[0]?.toLowerCase();
+  const slug = decodeSlug(parts[1]);
+
+  if (slug && ['videos', 'video', 'posts', 'post', 'shorts', 'short'].includes(section || '')) {
+    return { pathname: '/content/[slug]' as const, params: { slug } };
+  }
+
+  if (slug && ['games', 'game', 'channels', 'channel'].includes(section || '')) {
+    return { pathname: '/channel/[slug]' as const, params: { slug } };
+  }
+
+  if (slug && ['studios', 'studio'].includes(section || '')) {
+    return { pathname: '/studio/[slug]' as const, params: { slug } };
+  }
+
+  if (slug && ['collections', 'collection'].includes(section || '')) {
+    return { pathname: '/collection/[slug]' as const, params: { slug } };
+  }
+
+  if (slug && ['products', 'product'].includes(section || '')) {
+    return { pathname: '/product/[slug]' as const, params: { slug } };
+  }
+
+  if (clean === '/feed' || clean.startsWith('/feed/')) return '/feed' as const;
+  if (clean === '/game-radar' || clean === '/radar') return '/(tabs)/radar' as const;
+  if (clean === '/videos') return '/(tabs)/videos' as const;
+  if (clean === '/explore') return '/(tabs)/explore' as const;
+  if (clean === '/store') return '/store' as const;
+
+  return null;
+}
+
+async function openStoryLink(rawUrl: string) {
+  const target = nativeStoryTarget(rawUrl);
+  if (target) {
+    router.push(target);
+    return;
+  }
+
+  const trimmed = rawUrl.trim();
+  const externalUrl = /^https?:\/\//i.test(trimmed)
+    ? trimmed
+    : trimmed.startsWith('/')
+      ? PLAYNEXUS_ORIGIN + trimmed
+      : 'https://' + trimmed;
+
+  try {
+    await Linking.openURL(externalUrl);
+  } catch {
+    if (externalUrl !== PLAYNEXUS_ORIGIN) {
+      await Linking.openURL(PLAYNEXUS_ORIGIN);
+    }
+  }
+}
 
 export default function StoriesScreen() {
   const insets = useSafeAreaInsets();
@@ -216,7 +300,7 @@ export default function StoriesScreen() {
             <PressableScale
               haptic
               onPress={() => {
-                if (item.link_url) void Linking.openURL(item.link_url);
+                if (item.link_url) void openStoryLink(item.link_url);
               }}
               style={styles.linkButton}>
               <Text style={styles.linkArrow}>↖</Text>
