@@ -207,7 +207,7 @@ function ShortItem({
           <View
             style={[
               styles.progressFill,
-              { width: total ? ((index + 1) / total) * 100 + '%' : '0%' },
+              { width: (total ? ((index + 1) / total) * 100 + '%' : '0%') as `${number}%` },
             ]}
           />
         </View>
