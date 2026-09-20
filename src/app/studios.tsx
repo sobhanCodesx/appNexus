@@ -6,16 +6,19 @@ import { StudioCard } from '@/components/cards/studio-card';
 import { PageHeader } from '@/components/ui/page-header';
 import { Screen } from '@/components/ui/screen';
 import { layout, spacing } from '@/design';
-import { useApiResource } from '@/hooks/use-api-resource';
+import { usePaginatedResource } from '@/hooks/use-paginated-resource';
 import type { Paginated, StudioCard as Studio } from '@/types/api';
 
 export default function StudiosScreen(){
- const {data,refreshing,refresh}=useApiResource<Paginated<Studio>>('/studios',{data:[]});
+ const {data,refreshing,refresh,loadMore,loadingMore}=usePaginatedResource<Studio>('/studios');
  return <Screen>
   <PageHeader title="Studios" subtitle="GAME CREATORS" onSearch={()=>router.push('/search')} />
-  <FlashList data={data.data||[]} refreshing={refreshing} onRefresh={refresh} contentContainerStyle={styles.content}
+  <FlashList data={data.data||[]} refreshing={refreshing} onRefresh={refresh}
+   onEndReached={()=>void loadMore()} onEndReachedThreshold={0.45}
+   ListFooterComponent={loadingMore?<View style={styles.loading}/>:null}
+   contentContainerStyle={styles.content}
    renderItem={({item})=><View style={styles.card}><StudioCard item={item} onPress={()=>router.push({pathname:'/studio/[slug]',params:{slug:item.slug}})} /></View>}
   />
  </Screen>
 }
-const styles=StyleSheet.create({content:{paddingHorizontal:layout.screenPadding,paddingBottom:90},card:{marginBottom:spacing.md}});
+const styles=StyleSheet.create({loading:{height:48},content:{paddingHorizontal:layout.screenPadding,paddingBottom:90},card:{marginBottom:spacing.md}});
