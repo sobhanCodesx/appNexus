@@ -3,7 +3,7 @@ export const motion = {
   quick: 130,
   standard: 220,
   deliberate: 360,
-  cinematic: 520,
+  cinematic: 500,
   spring: {
     damping: 17,
     stiffness: 220,
