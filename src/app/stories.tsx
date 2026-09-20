@@ -77,13 +77,16 @@ export default function StoriesScreen() {
   );
 
   const [active, setActive] = useState(0);
-  const progress = useRef(new Animated.Value(0)).current;
+  const [progress] = useState(() => new Animated.Value(0));
   const remaining = useRef(STORY_DURATION);
 
   useEffect(() => {
     if (!items.length || !start) return;
     const index = items.findIndex((item) => slugOf(item) === start);
-    if (index >= 0) setActive(index);
+    if (index >= 0) {
+      const frame = requestAnimationFrame(() => setActive(index));
+      return () => cancelAnimationFrame(frame);
+    }
   }, [items, start]);
 
   const next = useCallback(() => {
