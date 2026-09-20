@@ -11,6 +11,7 @@ import {
 
 import { Screen } from '@/components/ui/screen';
 import {
+  fontFamily,
   fontWeight,
   layout,
   palette,
@@ -115,6 +116,7 @@ export const authStyles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.032)',
     color: palette.white,
     paddingHorizontal: spacing.lg,
+    fontFamily: fontFamily.regular,
     fontSize: typeScale.bodySm,
   },
   inputLarge: {
@@ -135,6 +137,7 @@ export const authStyles = StyleSheet.create({
   primaryText: {
     color: palette.ink,
     fontSize: typeScale.bodySm,
+    fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
   },
   primaryArrow: {
@@ -157,6 +160,7 @@ export const authStyles = StyleSheet.create({
   secondaryText: {
     color: palette.cyan,
     fontSize: typeScale.bodySm,
+    fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
   },
   link: {
@@ -167,10 +171,12 @@ export const authStyles = StyleSheet.create({
   linkText: {
     color: palette.textMuted,
     fontSize: typeScale.caption,
+    fontFamily: fontFamily.bold,
     fontWeight: fontWeight.bold,
   },
   error: {
     color: palette.danger,
+    fontFamily: fontFamily.regular,
     fontSize: typeScale.caption,
     lineHeight: 20,
     textAlign: 'right',
@@ -254,6 +260,7 @@ const styles = StyleSheet.create({
   },
   identityLabel: {
     fontSize: 8,
+    fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
     letterSpacing: 1,
     marginTop: spacing.sm,
@@ -287,12 +294,14 @@ const styles = StyleSheet.create({
   },
   kicker: {
     fontSize: 9,
+    fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
     letterSpacing: 1.2,
   },
   step: {
     color: palette.textDim,
     fontSize: 8,
+    fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
     letterSpacing: 0.8,
   },
@@ -300,6 +309,7 @@ const styles = StyleSheet.create({
     color: palette.white,
     fontSize: 33,
     lineHeight: 42,
+    fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
     textAlign: 'right',
     letterSpacing: -0.6,
@@ -307,6 +317,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     color: palette.textMuted,
+    fontFamily: fontFamily.regular,
     fontSize: typeScale.bodySm,
     lineHeight: 23,
     textAlign: 'right',
@@ -339,11 +350,13 @@ const styles = StyleSheet.create({
   fieldLabel: {
     color: palette.textMuted,
     fontSize: typeScale.caption,
+    fontFamily: fontFamily.bold,
     fontWeight: fontWeight.bold,
     textAlign: 'right',
   },
   fieldMeta: {
     color: palette.textDim,
+    fontFamily: fontFamily.regular,
     fontSize: 9,
   },
 });
