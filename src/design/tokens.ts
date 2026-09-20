@@ -81,6 +81,14 @@ export const fontWeight = {
   black: '900',
 } as const;
 
+export const fontFamily = {
+  regular: 'Vazirmatn_400Regular',
+  medium: 'Vazirmatn_500Medium',
+  semibold: 'Vazirmatn_600SemiBold',
+  bold: 'Vazirmatn_700Bold',
+  black: 'Vazirmatn_900Black',
+} as const;
+
 export const shadow = Platform.select({
   ios: {
     card: {
