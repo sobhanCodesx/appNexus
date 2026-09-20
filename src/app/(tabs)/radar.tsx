@@ -1,6 +1,7 @@
 import { FlashList } from '@shopify/flash-list';
+import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Linking, StyleSheet, Text, View } from 'react-native';
 
 import { RadarCard } from '@/components/cards/radar-card';
 import { Chip } from '@/components/ui/chip';
@@ -16,6 +17,7 @@ import {
   typeScale,
 } from '@/design';
 import { useApiResource } from '@/hooks/use-api-resource';
+import { nativeHrefFromUrl } from '@/services/native-navigation';
 import type { GameRadarItem } from '@/types/api';
 
 type RadarPayload = { items?: GameRadarItem[] };
@@ -37,9 +39,29 @@ export default function RadarScreen() {
     return source;
   }, [filter, source]);
 
+  const openSignal = (item: GameRadarItem) => {
+    const nativeHref = nativeHrefFromUrl(item.playnexus_url);
+    if (nativeHref) {
+      router.push(nativeHref);
+      return;
+    }
+
+    const storeUrl = filter === 'xbox'
+      ? item.xbox?.url || item.psn?.url
+      : item.psn?.url || item.xbox?.url;
+
+    if (storeUrl) {
+      void Linking.openURL(storeUrl);
+    }
+  };
+
   return (
     <Screen>
-      <PageHeader title="Game Radar" subtitle="LIVE RELEASE SIGNALS" />
+      <PageHeader
+        title="Game Radar"
+        subtitle="LIVE RELEASE SIGNALS"
+        onSearch={() => router.push('/search')}
+      />
 
       <FlashList
         data={items}
@@ -77,7 +99,7 @@ export default function RadarScreen() {
             </View>
 
             <View style={styles.cardWrap}>
-              <RadarCard item={item} width="100%" />
+              <RadarCard item={item} width="100%" onPress={() => openSignal(item)} />
             </View>
           </View>
         )}
