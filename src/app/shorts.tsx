@@ -23,20 +23,25 @@ import {
   spacing,
   typeScale,
 } from '@/design';
-import { useApiResource } from '@/hooks/use-api-resource';
+import { usePaginatedResource } from '@/hooks/use-paginated-resource';
 import { ApiError, apiRequest } from '@/services/api';
-import type { ContentCard, Paginated } from '@/types/api';
+import type { ContentCard } from '@/types/api';
 
 export default function ShortsScreen() {
   const { height } = useWindowDimensions();
-  const { data, refreshing, refresh } = useApiResource<Paginated<ContentCard>>(
-    '/shorts',
-    { data: [] },
+  const {
+    data,
+    items,
+    refreshing,
+    refresh,
+    loadMore,
+  } = usePaginatedResource<ContentCard>(
+    '/shorts?per_page=12',
     15_000,
   );
   const [activeId, setActiveId] = useState<number | null>(null);
 
-  const effectiveActiveId = activeId ?? data.data?.[0]?.id ?? null;
+  const effectiveActiveId = activeId ?? items[0]?.id ?? null;
 
   const onViewableItemsChanged = useCallback(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
@@ -49,11 +54,13 @@ export default function ShortsScreen() {
   return (
     <View style={styles.root}>
       <FlashList
-        data={data.data || []}
+        data={items}
         pagingEnabled
         showsVerticalScrollIndicator={false}
         refreshing={refreshing}
         onRefresh={refresh}
+        onEndReached={() => void loadMore()}
+        onEndReachedThreshold={0.72}
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={{ itemVisiblePercentThreshold: 72 }}
         renderItem={({ item, index }) => (
@@ -62,7 +69,7 @@ export default function ShortsScreen() {
             active={item.id === effectiveActiveId}
             height={height}
             index={index}
-            total={data.data?.length || 0}
+            total={data.total ?? items.length}
           />
         )}
       />
@@ -105,9 +112,13 @@ function ShortItem({
     },
   );
 
-  const [liked, setLiked] = useState(Boolean(item.is_liked));
-  const [saved, setSaved] = useState(false);
+  const [reaction, setReaction] = useState<'like' | 'dislike' | null>(
+    item.user_reaction ?? (item.is_liked ? 'like' : null),
+  );
+  const [saved, setSaved] = useState(Boolean(item.is_saved));
   const [manualPaused, setManualPaused] = useState(false);
+  const liked = reaction === 'like';
+  const disliked = reaction === 'dislike';
 
   useEffect(() => {
     if (!item.video_url) return;
@@ -127,13 +138,13 @@ function ShortItem({
     return false;
   };
 
-  const toggleLike = async () => {
+  const toggleReaction = async (type: 'like' | 'dislike') => {
     try {
-      const response = await apiRequest<{ reaction: 'like' | null }>(
+      const response = await apiRequest<{ reaction: 'like' | 'dislike' | null }>(
         '/contents/' + encodeURIComponent(item.slug) + '/reaction',
-        { method: 'POST', body: JSON.stringify({ type: 'like' }) },
+        { method: 'POST', body: JSON.stringify({ type }) },
       );
-      setLiked(response.reaction === 'like');
+      setReaction(response.reaction);
       void Haptics.selectionAsync();
     } catch (error) {
       requireAuth(error);
@@ -214,7 +225,13 @@ function ShortItem({
           symbol={liked ? '♥' : '♡'}
           label={(item.likes_count || 0).toLocaleString('fa-IR')}
           active={liked}
-          onPress={() => void toggleLike()}
+          onPress={() => void toggleReaction('like')}
+        />
+        <ShortAction
+          symbol={disliked ? '▼' : '▽'}
+          label={(item.dislikes_count || 0).toLocaleString('fa-IR')}
+          active={disliked}
+          onPress={() => void toggleReaction('dislike')}
         />
         <ShortAction
           symbol="◌"
@@ -423,17 +440,17 @@ const styles = StyleSheet.create({
   sideActions: {
     position: 'absolute',
     right: 14,
-    bottom: 116,
-    gap: spacing.lg,
+    bottom: 108,
+    gap: spacing.md,
   },
   action: {
     alignItems: 'center',
     gap: 5,
   },
   actionIcon: {
-    width: 54,
-    height: 54,
-    borderRadius: 19,
+    width: 50,
+    height: 50,
+    borderRadius: 18,
     backgroundColor: 'rgba(3,5,9,0.56)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.14)',
