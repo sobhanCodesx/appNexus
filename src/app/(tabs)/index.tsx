@@ -6,6 +6,7 @@ import { ContentCard } from '@/components/cards/content-card';
 import { HeroSpotlight } from '@/components/cards/hero-spotlight';
 import { RadarCard } from '@/components/cards/radar-card';
 import { StudioCard } from '@/components/cards/studio-card';
+import { Reveal } from '@/components/ui/motion-primitives';
 import { PageHeader } from '@/components/ui/page-header';
 import { QuickPortal } from '@/components/ui/quick-portal';
 import { Screen } from '@/components/ui/screen';
@@ -96,31 +97,36 @@ export default function HomeScreen() {
         renderItem={({ item }) => {
           if (item === 'hero') {
             return (
-              <View style={styles.heroSection}>
-                <HeroSpotlight
-                  slide={heroSlide}
-                  onPress={heroSlide ? openHero : undefined}
-                />
-              </View>
+              <Reveal delay={40}>
+                <View style={styles.heroSection}>
+                  <HeroSpotlight
+                    slide={heroSlide}
+                    onPress={heroSlide ? openHero : undefined}
+                  />
+                </View>
+              </Reveal>
             );
           }
 
           if (item === 'pulse') {
             return (
-              <NexusPulse
-                focus={intelligence?.focus_reason}
-                followedGames={followedGames}
-                error={error}
-              />
+              <Reveal delay={110}>
+                <NexusPulse
+                  focus={intelligence?.focus_reason}
+                  followedGames={followedGames}
+                  error={error}
+                />
+              </Reveal>
             );
           }
 
           if (item === 'portals') {
             return (
-              <View style={styles.section}>
-                <View style={styles.headerPad}>
-                  <SectionHeader
-                    title="مسیر سریع"
+              <Reveal delay={170}>
+                <View style={styles.section}>
+                  <View style={styles.headerPad}>
+                    <SectionHeader
+                      title="مسیر سریع"
                     eyebrow="JUMP IN"
                     action="همه‌چی نزدیکه"
                   />
@@ -159,7 +165,8 @@ export default function HomeScreen() {
                     onPress={() => router.push('/store')}
                   />
                 </ScrollView>
-              </View>
+                </View>
+              </Reveal>
             );
           }
 
