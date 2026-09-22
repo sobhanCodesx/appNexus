@@ -44,6 +44,39 @@ export default function OtpLoginScreen() {
     }
   };
 
+  const requestTelegram = async () => {
+    if (!requested || !phone.trim() || telegramBusy) return;
+
+    setTelegramBusy(true);
+    setMessage(null);
+
+    try {
+      const result = await apiRequest<{ identifier: string; message: string }>(
+        '/auth/passwordless/telegram',
+        {
+          method: 'POST',
+          body: JSON.stringify({ phone }),
+        },
+        { auth: false },
+      );
+
+      setPhone(result.identifier);
+      setMessage(result.message);
+      void Haptics.selectionAsync();
+    } catch (value) {
+      setMessage(
+        value instanceof Error
+          ? value.message
+          : 'ارسال کد از Telegram انجام نشد.',
+      );
+      void Haptics.notificationAsync(
+        Haptics.NotificationFeedbackType.Error,
+      );
+    } finally {
+      setTelegramBusy(false);
+    }
+  };
+
   const verify = async () => {
     if (code.length !== 6) return;
     setBusy(true);
