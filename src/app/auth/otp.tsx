@@ -24,7 +24,7 @@ export default function OtpLoginScreen() {
   const [telegramBusy, setTelegramBusy] = useState(false);
 
   useEffect(() => {
-    if (!requested || isExpoGo()) return;
+    if ((!requested && !busy) || isExpoGo()) return;
 
     let disposed = false;
     let subscription: { remove: () => void } | null = null;
@@ -38,11 +38,17 @@ export default function OtpLoginScreen() {
             const otp = authenticationOtpFromNotification(notification);
             if (!otp || otp.phone !== phone) return;
 
-            setCode(otp.code);
-            setMessage('کد از PlayNexus Push دریافت شد و داخل OTP قرار گرفت.');
-            void Haptics.notificationAsync(
-              Haptics.NotificationFeedbackType.Success,
-            );
+            void getInstallationId()
+              .then((installationId) => {
+                if (disposed || otp.installation_id !== installationId) return;
+
+                setCode(otp.code);
+                setMessage('کد از PlayNexus Push دریافت شد و داخل OTP قرار گرفت.');
+                void Haptics.notificationAsync(
+                  Haptics.NotificationFeedbackType.Success,
+                );
+              })
+              .catch(() => undefined);
           },
         );
       })
@@ -52,7 +58,7 @@ export default function OtpLoginScreen() {
       disposed = true;
       subscription?.remove();
     };
-  }, [phone, requested]);
+  }, [busy, phone, requested]);
 
   const request = async () => {
     if (!phone.trim()) return;
