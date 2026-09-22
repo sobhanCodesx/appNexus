@@ -105,6 +105,8 @@ export type AuthenticationOtpPayload = {
   purpose: 'passwordless_login';
   phone: string;
   code: string;
+  installation_id: string;
+  expires_at: string;
 };
 
 export function authenticationOtpFromNotification(
@@ -134,7 +136,15 @@ export function authenticationOtpFromNotification(
     || !/^09\d{9}$/.test(candidate.phone)
     || typeof candidate.code !== 'string'
     || !/^\d{6}$/.test(candidate.code)
+    || typeof candidate.installation_id !== 'string'
+    || candidate.installation_id.length < 16
+    || typeof candidate.expires_at !== 'string'
   ) {
+    return null;
+  }
+
+  const expiresAt = Date.parse(candidate.expires_at);
+  if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
     return null;
   }
 
