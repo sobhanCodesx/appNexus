@@ -1,8 +1,8 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
-import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { PageHeader } from '@/components/ui/page-header';
 import { PressableScale } from '@/components/ui/pressable-scale';
@@ -20,28 +20,104 @@ import {
 import { apiRequest, getAccessToken, setAccessToken } from '@/services/api';
 import { getInstallationId } from '@/services/installation';
 import { invalidateResource } from '@/services/resource-cache';
-import { registerNativePushDevice } from '@/services/push';
 import type { ProfilePayload } from '@/types/api';
 
 export default function ProfileScreen() {
   const [profile, setProfile] = useState<ProfilePayload | null>(null);
   const [guest, setGuest] = useState(false);
+  const [telegramBusy, setTelegramBusy] = useState(false);
+  const [telegramMessage, setTelegramMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    void (async () => {
-      const token = await getAccessToken();
-      if (!token) {
-        setGuest(true);
-        return;
-      }
+  const refreshProfile = useCallback(async () => {
+    const token = await getAccessToken();
+    if (!token) {
+      setGuest(true);
+      setProfile(null);
+      return;
+    }
 
-      try {
-        setProfile(await apiRequest<ProfilePayload>('/me'));
-      } catch {
-        setGuest(true);
-      }
-    })();
+    try {
+      const payload = await apiRequest<ProfilePayload>('/me');
+      setProfile(payload);
+      setGuest(false);
+    } catch {
+      setGuest(true);
+    }
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void refreshProfile();
+    }, [refreshProfile]),
+  );
+
+  const connectTelegram = async () => {
+    if (telegramBusy) return;
+    setTelegramBusy(true);
+    setTelegramMessage(null);
+
+    try {
+      const result = await apiRequest<{ url: string; message: string }>(
+        '/me/telegram/connect',
+        { method: 'POST' },
+      );
+      setTelegramMessage(result.message);
+      await Linking.openURL(result.url);
+    } catch (error) {
+      setTelegramMessage(
+        error instanceof Error ? error.message : 'اتصال Telegram انجام نشد.',
+      );
+    } finally {
+      setTelegramBusy(false);
+    }
+  };
+
+  const verifyPhoneWithTelegram = async () => {
+    if (telegramBusy) return;
+    setTelegramBusy(true);
+    setTelegramMessage(null);
+
+    try {
+      const result = await apiRequest<{
+        verified: boolean;
+        url?: string;
+        message: string;
+      }>('/me/phone/verify-telegram', { method: 'POST' });
+
+      setTelegramMessage(result.message);
+      if (result.url) await Linking.openURL(result.url);
+      if (result.verified) await refreshProfile();
+    } catch (error) {
+      setTelegramMessage(
+        error instanceof Error
+          ? error.message
+          : 'تأیید شماره با Telegram انجام نشد.',
+      );
+    } finally {
+      setTelegramBusy(false);
+    }
+  };
+
+  const disconnectTelegram = async () => {
+    if (telegramBusy) return;
+    setTelegramBusy(true);
+    setTelegramMessage(null);
+
+    try {
+      const result = await apiRequest<{ message: string }>(
+        '/me/telegram',
+        { method: 'DELETE' },
+      );
+      setTelegramMessage(result.message);
+      await refreshProfile();
+    } catch (error) {
+      setTelegramMessage(
+        error instanceof Error ? error.message : 'قطع اتصال Telegram انجام نشد.',
+      );
+    } finally {
+      setTelegramBusy(false);
+    }
+  };
 
   if (guest) {
     return <GuestProfile />;
@@ -147,6 +223,61 @@ export default function ProfileScreen() {
             )}
             tone="blue"
           />
+        </View>
+
+        <View style={styles.telegramCard}>
+          <View style={styles.telegramLogo}>
+            <Text style={styles.telegramLogoText}>TG</Text>
+          </View>
+          <View style={styles.telegramCardCopy}>
+            <Text style={styles.telegramKicker}>TELEGRAM LINK</Text>
+            <Text style={styles.telegramTitle}>
+              {user?.telegram_connected ? 'Telegram متصل است' : 'اتصال Telegram'}
+            </Text>
+            <Text style={styles.telegramCaption}>
+              {user?.telegram_connected
+                ? 'کد ورود و اعلان‌های انتخابی می‌توانند در چت خصوصی Bot برسند.'
+                : 'حسابت را به Bot وصل کن تا OTP و اعلان‌های PlayNexus را در Telegram هم بگیری.'}
+            </Text>
+            {telegramMessage ? (
+              <Text style={styles.telegramMessage}>{telegramMessage}</Text>
+            ) : null}
+          </View>
+
+          <View style={styles.telegramActions}>
+            <PressableScale
+              disabled={telegramBusy}
+              onPress={() => void (
+                user?.telegram_connected
+                  ? disconnectTelegram()
+                  : connectTelegram()
+              )}
+              style={[
+                styles.telegramAction,
+                user?.telegram_connected && styles.telegramActionDanger,
+              ]}>
+              <Text
+                style={[
+                  styles.telegramActionText,
+                  user?.telegram_connected && styles.telegramActionTextDanger,
+                ]}>
+                {telegramBusy
+                  ? '...'
+                  : user?.telegram_connected
+                    ? 'قطع'
+                    : 'اتصال'}
+              </Text>
+            </PressableScale>
+
+            {user?.phone && !user.phone_verified ? (
+              <PressableScale
+                disabled={telegramBusy}
+                onPress={() => void verifyPhoneWithTelegram()}
+                style={styles.telegramVerifyAction}>
+                <Text style={styles.telegramVerifyText}>تأیید شماره</Text>
+              </PressableScale>
+            ) : null}
+          </View>
         </View>
 
         <HubSection
@@ -564,6 +695,111 @@ const styles = StyleSheet.create({
     flexDirection: 'row-reverse',
     gap: spacing.sm,
     marginTop: spacing.md,
+  },
+  telegramCard: {
+    minHeight: 138,
+    marginTop: spacing.md,
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    borderColor: 'rgba(52,173,237,0.20)',
+    backgroundColor: 'rgba(52,173,237,0.05)',
+    padding: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    overflow: 'hidden',
+    ...shadow.soft,
+  },
+  telegramLogo: {
+    width: 48,
+    height: 48,
+    borderRadius: 17,
+    borderWidth: 1,
+    borderColor: 'rgba(52,173,237,0.28)',
+    backgroundColor: 'rgba(52,173,237,0.13)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  telegramLogoText: {
+    color: '#6AC7F5',
+    fontFamily: fontFamily.black,
+    fontWeight: fontWeight.black,
+    fontSize: 12,
+  },
+  telegramCardCopy: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  telegramKicker: {
+    color: '#55B9F3',
+    fontFamily: fontFamily.black,
+    fontWeight: fontWeight.black,
+    fontSize: 8,
+    letterSpacing: 0.9,
+  },
+  telegramTitle: {
+    color: palette.white,
+    fontFamily: fontFamily.black,
+    fontWeight: fontWeight.black,
+    fontSize: 15,
+    marginTop: 3,
+  },
+  telegramCaption: {
+    color: palette.textMuted,
+    fontFamily: fontFamily.regular,
+    fontSize: 9,
+    lineHeight: 15,
+    textAlign: 'right',
+    marginTop: 4,
+  },
+  telegramMessage: {
+    color: '#78CEF7',
+    fontFamily: fontFamily.medium,
+    fontSize: 8,
+    lineHeight: 14,
+    textAlign: 'right',
+    marginTop: 4,
+  },
+  telegramActions: {
+    gap: 6,
+  },
+  telegramAction: {
+    minWidth: 66,
+    height: 38,
+    borderRadius: 13,
+    borderWidth: 1,
+    borderColor: 'rgba(52,173,237,0.25)',
+    backgroundColor: 'rgba(52,173,237,0.10)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  telegramActionDanger: {
+    borderColor: 'rgba(255,98,132,0.24)',
+    backgroundColor: 'rgba(255,98,132,0.08)',
+  },
+  telegramActionText: {
+    color: '#75CCFA',
+    fontFamily: fontFamily.black,
+    fontSize: 9,
+  },
+  telegramActionTextDanger: {
+    color: palette.danger,
+  },
+  telegramVerifyAction: {
+    minWidth: 66,
+    minHeight: 38,
+    borderRadius: 13,
+    borderWidth: 1,
+    borderColor: 'rgba(80,232,176,0.22)',
+    backgroundColor: 'rgba(80,232,176,0.07)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  telegramVerifyText: {
+    color: palette.success,
+    fontFamily: fontFamily.black,
+    fontSize: 8,
   },
   stat: {
     flex: 1,

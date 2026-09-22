@@ -3,7 +3,7 @@ import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { VideoView, useVideoPlayer, type VideoThumbnail } from 'expo-video';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
@@ -219,6 +219,13 @@ function NativeVideo({
       controlsTimer.current = null;
     }
   }, []);
+
+  useFocusEffect(
+    useCallback(() => () => {
+      player.pause();
+      clearControlsTimer();
+    }, [clearControlsTimer, player]),
+  );
 
   const revealControls = useCallback((autohide = true) => {
     clearControlsTimer();

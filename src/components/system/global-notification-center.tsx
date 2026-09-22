@@ -102,13 +102,15 @@ export function GlobalNotificationCenter() {
         onPress={() => {
           if (pathname !== '/notifications') router.push('/notifications');
         }}
-        style={[styles.orb, pathname === '/notifications' && styles.orbActive]}>
-        <BlurView intensity={88} tint="dark" style={StyleSheet.absoluteFill} />
-        <View style={styles.halo} />
-        <View style={styles.bell}>
-          <View style={styles.bellDome} />
-          <View style={styles.bellBase} />
-          <View style={styles.bellDot} />
+        style={styles.orbShell}>
+        <View style={[styles.orb, pathname === '/notifications' && styles.orbActive]}>
+          <BlurView intensity={88} tint="dark" style={StyleSheet.absoluteFill} />
+          <View style={styles.halo} />
+          <View style={styles.bell}>
+            <View style={styles.bellDome} />
+            <View style={styles.bellBase} />
+            <View style={styles.bellDot} />
+          </View>
         </View>
 
         {unread > 0 ? (
@@ -129,6 +131,12 @@ const styles = StyleSheet.create({
     right: 14,
     zIndex: 900,
     elevation: 24,
+  },
+  orbShell: {
+    width: 62,
+    height: 62,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   orb: {
     width: 54,
@@ -188,28 +196,31 @@ const styles = StyleSheet.create({
   },
   badge: {
     position: 'absolute',
-    top: -4,
-    right: -4,
-    minWidth: 22,
-    height: 22,
-    paddingHorizontal: 5,
-    borderRadius: 11,
+    top: -2,
+    right: -2,
+    minWidth: 26,
+    height: 26,
+    paddingHorizontal: 6,
+    borderRadius: 13,
     backgroundColor: palette.magenta,
     borderWidth: 2,
     borderColor: palette.ink,
     alignItems: 'center',
     justifyContent: 'center',
+    elevation: 30,
+    ...shadow.soft,
   },
   badgeText: {
     color: palette.white,
     fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
-    fontSize: 8,
+    fontSize: 10,
+    lineHeight: 13,
   },
   onlineDot: {
     position: 'absolute',
-    top: 8,
-    right: 8,
+    top: 7,
+    right: 7,
     width: 6,
     height: 6,
     borderRadius: 6,

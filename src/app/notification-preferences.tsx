@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 
@@ -9,17 +10,33 @@ import { useApiResource } from '@/hooks/use-api-resource';
 import { apiRequest } from '@/services/api';
 import { invalidateResource } from '@/services/resource-cache';
 import { registerNativePushDevice } from '@/services/push';
+import type { ProfilePayload } from '@/types/api';
 
-type Preferences = { sms_enabled: boolean; email_enabled: boolean; feed_enabled: boolean };
+type Preferences = {
+  sms_enabled: boolean;
+  email_enabled: boolean;
+  feed_enabled: boolean;
+  telegram_enabled: boolean;
+};
 type Payload = { preferences: Preferences };
-const defaults: Payload = { preferences: { sms_enabled: true, email_enabled: false, feed_enabled: false } };
+const defaults: Payload = {
+  preferences: {
+    sms_enabled: true,
+    email_enabled: false,
+    feed_enabled: false,
+    telegram_enabled: false,
+  },
+};
+const emptyProfile: ProfilePayload = { profile: { id: 0, name: '' } };
 
 export default function NotificationPreferencesScreen() {
   const { data, refresh } = useApiResource<Payload>('/notification-preferences', defaults);
+  const { data: account } = useApiResource<ProfilePayload>('/me', emptyProfile);
   const [draft, setDraft] = useState<Preferences | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [pushState, setPushState] = useState<'idle' | 'busy' | 'ready' | 'blocked'>('idle');
   const values = draft ?? data.preferences;
+  const telegramConnected = Boolean(account.profile.telegram_connected);
 
   const update = (key: keyof Preferences, value: boolean) => setDraft({ ...values, [key]: value });
 
@@ -73,6 +90,25 @@ export default function NotificationPreferencesScreen() {
         <Preference title="پیامک" caption="اعلان‌های محتوایی مهم از طریق SMS" value={values.sms_enabled} onChange={(v) => update('sms_enabled', v)} />
         <Preference title="ایمیل" caption="خلاصه و اعلان‌های محتوایی روی ایمیل" value={values.email_enabled} onChange={(v) => update('email_enabled', v)} />
         <Preference title="فید + Push محتوایی" caption="اعلان انتشار محتوای بازی‌هایی که دنبال می‌کنی داخل اپ و روی گوشی" value={values.feed_enabled} onChange={(v) => update('feed_enabled', v)} />
+        <Preference
+          title="Telegram"
+          caption={
+            telegramConnected
+              ? 'OTP و اعلان‌های انتخابی را در چت خصوصی Bot هم دریافت کن'
+              : 'برای فعال‌سازی، اول Telegram را از Player Hub به حسابت وصل کن'
+          }
+          value={values.telegram_enabled}
+          disabled={!telegramConnected}
+          onChange={(v) => update('telegram_enabled', v)}
+        />
+        {!telegramConnected ? (
+          <PressableScale
+            haptic={false}
+            onPress={() => router.push('/(tabs)/profile')}
+            style={styles.telegramLink}>
+            <Text style={styles.telegramLinkText}>رفتن به Player Hub و اتصال Telegram</Text>
+          </PressableScale>
+        ) : null}
         {message ? <Text style={styles.message}>{message}</Text> : null}
         <PressableScale onPress={() => void save()} style={styles.primary}><Text style={styles.primaryText}>ذخیره تنظیمات</Text></PressableScale>
       </ScrollView>
@@ -80,10 +116,28 @@ export default function NotificationPreferencesScreen() {
   );
 }
 
-function Preference({ title, caption, value, onChange }: { title: string; caption: string; value: boolean; onChange: (value: boolean) => void }) {
+function Preference({
+  title,
+  caption,
+  value,
+  onChange,
+  disabled = false,
+}: {
+  title: string;
+  caption: string;
+  value: boolean;
+  onChange: (value: boolean) => void;
+  disabled?: boolean;
+}) {
   return (
-    <View style={styles.row}>
-      <Switch value={value} onValueChange={onChange} trackColor={{ false: palette.surfaceBright, true: palette.blueHot }} thumbColor={palette.white} />
+    <View style={[styles.row, disabled && styles.rowDisabled]}>
+      <Switch
+        value={value}
+        disabled={disabled}
+        onValueChange={onChange}
+        trackColor={{ false: palette.surfaceBright, true: palette.blueHot }}
+        thumbColor={palette.white}
+      />
       <View style={styles.copy}>
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.caption}>{caption}</Text>
@@ -105,6 +159,9 @@ const styles = StyleSheet.create({
   pushButtonReady: { borderColor: 'rgba(80,232,176,0.24)', backgroundColor: 'rgba(80,232,176,0.08)' },
   pushButtonText: { color: palette.white, fontFamily: fontFamily.black, fontSize: 9 },
   row: { minHeight: 92, borderRadius: radii.xl, borderWidth: 1, borderColor: palette.line, backgroundColor: 'rgba(255,255,255,0.03)', padding: spacing.md, flexDirection: 'row', gap: spacing.md, alignItems: 'center' },
+  rowDisabled: { opacity: 0.58 },
+  telegramLink: { minHeight: 44, borderRadius: radii.lg, borderWidth: 1, borderColor: 'rgba(52,173,237,0.20)', backgroundColor: 'rgba(52,173,237,0.06)', alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.md },
+  telegramLinkText: { color: '#6AC7F5', fontFamily: fontFamily.black, fontSize: 10 },
   copy: { flex: 1, alignItems: 'flex-end' },
   title: { color: palette.white, fontFamily: fontFamily.black, fontSize: 16 },
   caption: { color: palette.textMuted, fontFamily: fontFamily.regular, textAlign: 'right', fontSize: 11, lineHeight: 18, marginTop: 3 },

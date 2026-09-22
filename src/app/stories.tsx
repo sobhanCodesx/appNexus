@@ -1,7 +1,7 @@
 import { useEventListener } from 'expo';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -375,13 +375,19 @@ function StoryVideo({
     player.muted = muted;
   }, [muted, player]);
 
-  useEffect(() => {
-    if (paused) {
-      player.pause();
-    } else {
-      player.play();
-    }
-  }, [paused, player]);
+  useFocusEffect(
+    useCallback(() => {
+      if (paused) {
+        player.pause();
+      } else {
+        player.play();
+      }
+
+      return () => {
+        player.pause();
+      };
+    }, [paused, player]),
+  );
 
   useEventListener(player, 'timeUpdate', ({ currentTime }) => {
     const duration = player.duration || 0;

@@ -255,11 +255,24 @@ export type ProfilePayload = {
   profile: {
     id: number;
     name: string;
+    first_name?: string | null;
+    last_name?: string | null;
     email?: string | null;
     phone?: string | null;
+    birth_date?: string | null;
     avatar_url?: ImageUrl;
     wallet_balance?: number;
     role?: string;
+    has_password?: boolean;
+    email_verified?: boolean;
+    phone_verified?: boolean;
+    telegram_connected?: boolean;
+  };
+  notification_preferences?: {
+    sms_enabled?: boolean;
+    email_enabled?: boolean;
+    feed_enabled?: boolean;
+    telegram_enabled?: boolean;
   };
   wallet_balance?: number;
   unread_notifications_count?: number;

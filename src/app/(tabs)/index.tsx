@@ -1,5 +1,6 @@
 import { FlashList } from '@shopify/flash-list';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -41,6 +42,7 @@ import type {
 
 type Section =
   | 'hero'
+  | 'overview'
   | 'videos'
   | 'games'
   | 'pulse'
@@ -169,6 +171,7 @@ export default function HomeScreen() {
 
   const sections: Section[] = [
     'hero',
+    'overview',
     ...(loading || latestVideos.length ? ['videos' as const] : []),
     ...(loading || latestGames.length ? ['games' as const] : []),
     ...(loading || feedItems.length ? ['feed' as const] : []),
@@ -214,6 +217,20 @@ export default function HomeScreen() {
                     <NexusLatestSlider items={latestNexus} />
                   )}
                 </View>
+              </Reveal>
+            );
+          }
+
+          if (item === 'overview') {
+            return (
+              <Reveal delay={90}>
+                <HomeSignalDeck
+                  feedCount={feed.length}
+                  videoCount={latestVideos.length}
+                  gamesCount={latestGames.length}
+                  radarCount={radar.length}
+                  followedCount={followedGames.length}
+                />
               </Reveal>
             );
           }
@@ -627,6 +644,89 @@ export default function HomeScreen() {
   );
 }
 
+function HomeSignalDeck({
+  feedCount,
+  videoCount,
+  gamesCount,
+  radarCount,
+  followedCount,
+}: {
+  feedCount: number;
+  videoCount: number;
+  gamesCount: number;
+  radarCount: number;
+  followedCount: number;
+}) {
+  const signals = [
+    { label: 'Feed', value: feedCount, tone: palette.cyan },
+    { label: 'Video', value: videoCount, tone: palette.magenta },
+    { label: 'Games', value: gamesCount, tone: palette.violet },
+    { label: 'Radar', value: radarCount, tone: palette.blue },
+  ];
+
+  return (
+    <View style={styles.signalDeckWrap}>
+      <LinearGradient
+        colors={[
+          'rgba(24,124,255,0.12)',
+          'rgba(167,123,255,0.07)',
+          'rgba(7,11,18,0.92)',
+        ]}
+        start={{ x: 1, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={styles.signalDeck}>
+        <View style={styles.signalGlowA} />
+        <View style={styles.signalGlowB} />
+
+        <View style={styles.signalDeckHeader}>
+          <View style={styles.signalDeckCopy}>
+            <Text style={styles.signalDeckKicker}>NEXUS COMMAND DECK</Text>
+            <Text style={styles.signalDeckTitle}>همه‌چیزِ مهم، همین پایین هدر</Text>
+            <Text style={styles.signalDeckCaption}>
+              {followedCount
+                ? followedCount.toLocaleString('fa-IR') + ' بازی دنبال‌شده روی سیگنال شخصی تو اثر می‌گذارند.'
+                : 'خبر، ویدیو، بازی و رادار را یکجا ببین و از همین صفحه وارد هر مسیر شو.'}
+            </Text>
+          </View>
+          <View style={styles.signalDeckOrb}>
+            <View style={styles.signalDeckOrbCore} />
+          </View>
+        </View>
+
+        <View style={styles.signalMetrics}>
+          {signals.map((signal) => (
+            <View key={signal.label} style={styles.signalMetric}>
+              <View style={[styles.signalMetricDot, { backgroundColor: signal.tone }]} />
+              <Text style={styles.signalMetricValue}>
+                {signal.value.toLocaleString('fa-IR')}
+              </Text>
+              <Text style={styles.signalMetricLabel}>{signal.label}</Text>
+            </View>
+          ))}
+        </View>
+
+        <View style={styles.signalActions}>
+          <PressableScale
+            onPress={() => router.push('/feed')}
+            style={styles.signalActionPrimary}>
+            <Text style={styles.signalActionPrimaryText}>ورود به Feed</Text>
+          </PressableScale>
+          <PressableScale
+            onPress={() => router.push('/(tabs)/explore')}
+            style={styles.signalActionSecondary}>
+            <Text style={styles.signalActionSecondaryText}>Explore</Text>
+          </PressableScale>
+          <PressableScale
+            onPress={() => router.push('/store')}
+            style={styles.signalActionSecondary}>
+            <Text style={styles.signalActionSecondaryText}>Store</Text>
+          </PressableScale>
+        </View>
+      </LinearGradient>
+    </View>
+  );
+}
+
 function HomeProductRail({
   title,
   eyebrow,
@@ -925,6 +1025,153 @@ const styles = StyleSheet.create({
   },
   heroSection: {
     marginBottom: spacing.lg,
+  },
+  signalDeckWrap: {
+    paddingHorizontal: layout.screenPadding,
+    marginBottom: spacing.xl,
+  },
+  signalDeck: {
+    minHeight: 238,
+    borderRadius: radii.xxl,
+    borderWidth: 1,
+    borderColor: 'rgba(88,244,255,0.14)',
+    padding: spacing.lg,
+    overflow: 'hidden',
+    ...shadow.card,
+  },
+  signalGlowA: {
+    position: 'absolute',
+    width: 170,
+    height: 170,
+    borderRadius: 170,
+    right: -70,
+    top: -82,
+    backgroundColor: 'rgba(88,244,255,0.07)',
+  },
+  signalGlowB: {
+    position: 'absolute',
+    width: 150,
+    height: 150,
+    borderRadius: 150,
+    left: -72,
+    bottom: -85,
+    backgroundColor: 'rgba(211,84,255,0.07)',
+  },
+  signalDeckHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  signalDeckCopy: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  signalDeckKicker: {
+    color: palette.cyan,
+    fontFamily: fontFamily.black,
+    fontWeight: fontWeight.black,
+    fontSize: 8,
+    letterSpacing: 1.1,
+  },
+  signalDeckTitle: {
+    color: palette.white,
+    fontFamily: fontFamily.black,
+    fontWeight: fontWeight.black,
+    fontSize: 19,
+    marginTop: 4,
+    textAlign: 'right',
+  },
+  signalDeckCaption: {
+    color: palette.textMuted,
+    fontFamily: fontFamily.regular,
+    fontSize: 10,
+    lineHeight: 17,
+    marginTop: 5,
+    textAlign: 'right',
+  },
+  signalDeckOrb: {
+    width: 58,
+    height: 58,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(88,244,255,0.22)',
+    backgroundColor: 'rgba(88,244,255,0.06)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadow.cyanGlow,
+  },
+  signalDeckOrbCore: {
+    width: 17,
+    height: 17,
+    borderRadius: 6,
+    backgroundColor: palette.cyan,
+    transform: [{ rotate: '45deg' }],
+  },
+  signalMetrics: {
+    flexDirection: 'row-reverse',
+    gap: 7,
+    marginTop: spacing.lg,
+  },
+  signalMetric: {
+    flex: 1,
+    minHeight: 62,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(255,255,255,0.035)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  signalMetricDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 5,
+    marginBottom: 3,
+  },
+  signalMetricValue: {
+    color: palette.white,
+    fontFamily: fontFamily.black,
+    fontWeight: fontWeight.black,
+    fontSize: 15,
+  },
+  signalMetricLabel: {
+    color: palette.textDim,
+    fontFamily: fontFamily.bold,
+    fontSize: 8,
+    marginTop: 1,
+  },
+  signalActions: {
+    flexDirection: 'row-reverse',
+    gap: 7,
+    marginTop: spacing.md,
+  },
+  signalActionPrimary: {
+    minHeight: 42,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    backgroundColor: palette.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  signalActionPrimaryText: {
+    color: palette.ink,
+    fontFamily: fontFamily.black,
+    fontSize: 9,
+  },
+  signalActionSecondary: {
+    minHeight: 42,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
+    backgroundColor: 'rgba(255,255,255,0.035)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  signalActionSecondaryText: {
+    color: palette.white,
+    fontFamily: fontFamily.black,
+    fontSize: 9,
   },
   section: {
     marginBottom: spacing.xl,

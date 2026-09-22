@@ -1,4 +1,3 @@
-import * as Google from 'expo-auth-session/providers/google';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -17,7 +16,8 @@ import {
 
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { Screen } from '@/components/ui/screen';
-import { fontFamily, fontWeight, layout, palette, radii, shadow, spacing, typeScale } from '@/design';
+import { fontFamily, fontWeight, layout, palette, shadow, spacing, typeScale } from '@/design';
+import { PLAYNEXUS_SITE_URL } from '@/config/app';
 import { ApiError, apiRequest, setAccessToken } from '@/services/api';
 import { registerNativePushDevice } from '@/services/push';
 
@@ -28,11 +28,7 @@ type LoginResponse = {
   user: { id: number; name: string };
 };
 
-const googleWebClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
-const googleAndroidClientId = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || googleWebClientId;
-const googleIosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || googleWebClientId;
-const googleConfigured = Boolean(googleWebClientId || googleAndroidClientId || googleIosClientId);
-const googleFallbackClientId = 'not-configured.apps.googleusercontent.com';
+const googleRedirectUrl = 'playnexus://auth/google';
 const logo = require('../../../assets/images/playnexus-app-icon.png');
 
 export default function LoginScreen() {
@@ -41,15 +37,6 @@ export default function LoginScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [googleBusy, setGoogleBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const [googleRequest, , promptGoogle] = Google.useAuthRequest({
-    clientId: googleWebClientId || googleFallbackClientId,
-    webClientId: googleWebClientId || googleFallbackClientId,
-    androidClientId: googleAndroidClientId || googleFallbackClientId,
-    iosClientId: googleIosClientId || googleFallbackClientId,
-    selectAccount: true,
-    scopes: ['openid', 'profile', 'email'],
-  });
 
   const finishLogin = async (result: LoginResponse) => {
     await setAccessToken(result.access_token);
@@ -114,27 +101,48 @@ export default function LoginScreen() {
   };
 
   const google = async () => {
-    if (!googleConfigured) {
-      setError('ورود Google هنوز Client ID موبایل ندارد. تنظیمات OAuth این build را کامل کن.');
-      return;
-    }
+    if (googleBusy) return;
 
     setGoogleBusy(true);
     setError(null);
 
     try {
-      const authResult = await promptGoogle();
-      if (authResult.type !== 'success') return;
+      const startUrl =
+        PLAYNEXUS_SITE_URL
+        + '/auth/google/mobile?device_name='
+        + encodeURIComponent(Platform.OS + ' PlayNexus');
 
-      const idToken = authResult.params.id_token || authResult.authentication?.idToken;
-      if (!idToken) throw new Error('Google توکن هویتی معتبر برنگرداند.');
+      const authResult = await WebBrowser.openAuthSessionAsync(
+        startUrl,
+        googleRedirectUrl,
+      );
+
+      if (authResult.type !== 'success' || !authResult.url) {
+        if (authResult.type !== 'cancel' && authResult.type !== 'dismiss') {
+          throw new Error('ورود Google کامل نشد.');
+        }
+        return;
+      }
+
+      const callback = new URL(authResult.url);
+      const oauthError = callback.searchParams.get('error');
+      if (oauthError) {
+        throw new Error(
+          oauthError === 'config'
+            ? 'ورود Google روی سرور PlayNexus آماده نیست.'
+            : 'ورود Google کامل نشد. دوباره تلاش کن.',
+        );
+      }
+
+      const code = callback.searchParams.get('code');
+      if (!code) throw new Error('کد امن ورود Google دریافت نشد.');
 
       const result = await apiRequest<LoginResponse>(
-        '/auth/google',
+        '/auth/google/exchange',
         {
           method: 'POST',
           body: JSON.stringify({
-            id_token: idToken,
+            code,
             device_name: Platform.OS + ' PlayNexus',
           }),
         },
@@ -227,16 +235,13 @@ export default function LoginScreen() {
             </View>
 
             <PressableScale
-              disabled={!googleRequest || googleBusy || !googleConfigured}
+              disabled={googleBusy}
               onPress={() => void google()}
-              style={[styles.google, (!googleConfigured || googleBusy) && styles.googleDisabled]}>
+              style={[styles.google, googleBusy && styles.googleDisabled]}>
               <View style={styles.googleMark}><Text style={styles.googleMarkText}>G</Text></View>
               <Text style={styles.googleText}>{googleBusy ? 'در حال اتصال…' : 'ادامه با Google'}</Text>
             </PressableScale>
 
-            {!googleConfigured ? (
-              <Text style={styles.googleHint}>Google OAuth برای این build نیاز به Client ID دارد.</Text>
-            ) : null}
           </View>
 
           <View style={styles.footer}>

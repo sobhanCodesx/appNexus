@@ -1,6 +1,7 @@
 import { useEventListener } from 'expo';
+import { useFocusEffect } from 'expo-router';
 import { VideoView, useVideoPlayer } from 'expo-video';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { fontFamily, fontWeight, palette, radii } from '@/design';
@@ -50,6 +51,16 @@ function PreviewPlayer({ source, compact }: { source: string; compact: boolean }
     instance.currentTime = 0;
     instance.play();
   });
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!finished) player.play();
+
+      return () => {
+        player.pause();
+      };
+    }, [finished, player]),
+  );
 
   useEffect(() => {
     const timer = setTimeout(() => {

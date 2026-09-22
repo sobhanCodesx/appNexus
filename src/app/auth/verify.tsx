@@ -1,6 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Platform, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Linking, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useState } from 'react';
 
 import {
@@ -31,6 +31,9 @@ export default function VerifyScreen() {
 
   const [code, setCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [telegramBusy, setTelegramBusy] = useState(false);
+  const [telegramClaim, setTelegramClaim] = useState<string | null>(null);
+  const [telegramUrl, setTelegramUrl] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
   const verify = async () => {
@@ -65,6 +68,80 @@ export default function VerifyScreen() {
       );
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const beginTelegramVerification = async () => {
+    if (channel !== 'mobile' || !identifier || telegramBusy) return;
+
+    setTelegramBusy(true);
+    setMessage(null);
+
+    try {
+      const result = await apiRequest<{
+        identifier: string;
+        claim_token: string;
+        url: string;
+        message: string;
+      }>(
+        '/auth/verification/telegram',
+        {
+          method: 'POST',
+          body: JSON.stringify({ phone: identifier }),
+        },
+        { auth: false },
+      );
+
+      setTelegramClaim(result.claim_token);
+      setTelegramUrl(result.url);
+      setMessage(result.message);
+      await Linking.openURL(result.url);
+    } catch (value) {
+      setMessage(
+        value instanceof Error
+          ? value.message
+          : 'شروع تأیید با Telegram انجام نشد.',
+      );
+      void Haptics.notificationAsync(
+        Haptics.NotificationFeedbackType.Error,
+      );
+    } finally {
+      setTelegramBusy(false);
+    }
+  };
+
+  const completeTelegramVerification = async () => {
+    if (!telegramClaim || telegramBusy) return;
+
+    setTelegramBusy(true);
+    setMessage(null);
+
+    try {
+      const result = await apiRequest<TokenResponse>(
+        '/auth/verification/telegram/complete',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            claim_token: telegramClaim,
+            device_name: Platform.OS + ' PlayNexus',
+          }),
+        },
+        { auth: false },
+      );
+
+      await setAccessToken(result.access_token);
+      void Haptics.notificationAsync(
+        Haptics.NotificationFeedbackType.Success,
+      );
+      router.replace('/(tabs)/profile');
+    } catch (value) {
+      setMessage(
+        value instanceof Error
+          ? value.message
+          : 'تأیید Telegram هنوز کامل نشده است.',
+      );
+    } finally {
+      setTelegramBusy(false);
     }
   };
 
@@ -161,6 +238,46 @@ export default function VerifyScreen() {
           <Text style={styles.resendButtonText}>ارسال مجدد</Text>
         </PressableScale>
       </View>
+
+      {channel === 'mobile' ? (
+        <View style={styles.telegramPanel}>
+          <View style={styles.telegramMark}>
+            <Text style={styles.telegramMarkText}>TG</Text>
+          </View>
+          <View style={styles.telegramCopy}>
+            <Text style={styles.telegramKicker}>SECURE PHONE PROOF</Text>
+            <Text style={styles.telegramTitle}>تأیید مستقیم با Telegram</Text>
+            <Text style={styles.telegramText}>
+              Bot فقط شماره متعلق به همان حساب Telegram را می‌پذیرد؛ بعد از اشتراک شماره، کد SMS لازم نیست.
+            </Text>
+          </View>
+          <PressableScale
+            disabled={telegramBusy}
+            onPress={() => void (
+              telegramClaim
+                ? completeTelegramVerification()
+                : beginTelegramVerification()
+            )}
+            style={[styles.telegramButton, telegramBusy && styles.disabled]}>
+            <Text style={styles.telegramButtonText}>
+              {telegramBusy
+                ? '...'
+                : telegramClaim
+                  ? 'بررسی تأیید'
+                  : 'باز کردن Telegram'}
+            </Text>
+          </PressableScale>
+        </View>
+      ) : null}
+
+      {channel === 'mobile' && telegramClaim && telegramUrl ? (
+        <PressableScale
+          haptic={false}
+          onPress={() => void Linking.openURL(telegramUrl)}
+          style={authStyles.link}>
+          <Text style={authStyles.linkText}>باز کردن دوباره Bot</Text>
+        </PressableScale>
+      ) : null}
     </AuthScaffold>
   );
 }
@@ -275,6 +392,72 @@ const styles = StyleSheet.create({
   resendButtonText: {
     color: palette.violet,
     fontSize: typeScale.caption,
+    fontWeight: fontWeight.black,
+  },
+  telegramPanel: {
+    minHeight: 118,
+    marginTop: spacing.xs,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(52,173,237,0.20)',
+    backgroundColor: 'rgba(52,173,237,0.055)',
+    padding: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  telegramMark: {
+    width: 42,
+    height: 42,
+    borderRadius: 15,
+    backgroundColor: 'rgba(52,173,237,0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(52,173,237,0.24)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  telegramMarkText: {
+    color: '#55B9F3',
+    fontSize: 11,
+    fontWeight: fontWeight.black,
+  },
+  telegramCopy: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  telegramKicker: {
+    color: '#55B9F3',
+    fontSize: 7,
+    fontWeight: fontWeight.black,
+    letterSpacing: 0.8,
+  },
+  telegramTitle: {
+    color: palette.white,
+    fontSize: 13,
+    fontWeight: fontWeight.black,
+    marginTop: 3,
+  },
+  telegramText: {
+    color: palette.textMuted,
+    fontSize: 9,
+    lineHeight: 15,
+    textAlign: 'right',
+    marginTop: 3,
+  },
+  telegramButton: {
+    minWidth: 92,
+    minHeight: 42,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(52,173,237,0.25)',
+    backgroundColor: 'rgba(52,173,237,0.10)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 9,
+  },
+  telegramButtonText: {
+    color: '#75CCFA',
+    fontSize: 9,
     fontWeight: fontWeight.black,
   },
 });

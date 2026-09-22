@@ -94,6 +94,7 @@ export default function TabsLayout() {
           overflow: 'hidden',
         },
         tabBarStyle: {
+          display: 'none',
           position: 'absolute',
           left: 10,
           right: 10,

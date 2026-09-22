@@ -2,9 +2,9 @@ import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { VideoView, useVideoPlayer } from 'expo-video';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -131,15 +131,21 @@ function ShortItem({
   const liked = reaction === 'like';
   const disliked = reaction === 'dislike';
 
-  useEffect(() => {
-    if (!item.video_url) return;
+  useFocusEffect(
+    useCallback(() => {
+      if (!item.video_url) return undefined;
 
-    if (active && !manualPaused) {
-      player.play();
-    } else {
-      player.pause();
-    }
-  }, [active, item.video_url, manualPaused, player]);
+      if (active && !manualPaused) {
+        player.play();
+      } else {
+        player.pause();
+      }
+
+      return () => {
+        player.pause();
+      };
+    }, [active, item.video_url, manualPaused, player]),
+  );
 
   const requireAuth = (error: unknown) => {
     if (error instanceof ApiError && error.status === 401) {
