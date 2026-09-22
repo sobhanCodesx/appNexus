@@ -100,6 +100,47 @@ export function notificationUrl(
   return typeof url === 'string' ? url : null;
 }
 
+export type AuthenticationOtpPayload = {
+  type: 'auth_otp';
+  purpose: 'passwordless_login';
+  phone: string;
+  code: string;
+};
+
+export function authenticationOtpFromNotification(
+  notification: NotificationLike,
+): AuthenticationOtpPayload | null {
+  const data = notification.request?.content?.data;
+  if (!data) return null;
+
+  const raw = data.notification ?? data;
+  let payload: unknown = raw;
+
+  if (typeof raw === 'string') {
+    try {
+      payload = JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  }
+
+  if (!payload || typeof payload !== 'object') return null;
+
+  const candidate = payload as Partial<AuthenticationOtpPayload>;
+  if (
+    candidate.type !== 'auth_otp'
+    || candidate.purpose !== 'passwordless_login'
+    || typeof candidate.phone !== 'string'
+    || !/^09\d{9}$/.test(candidate.phone)
+    || typeof candidate.code !== 'string'
+    || !/^\d{6}$/.test(candidate.code)
+  ) {
+    return null;
+  }
+
+  return candidate as AuthenticationOtpPayload;
+}
+
 export function notificationSummary(notification: NotificationLike) {
   const content = notification.request?.content;
 
