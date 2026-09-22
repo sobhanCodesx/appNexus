@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { Platform, StyleSheet, Text, TextInput, View } from 'react-native';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import {
   AuthFieldLabel,
@@ -11,6 +11,8 @@ import {
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { fontWeight, palette, radii, spacing, typeScale } from '@/design';
 import { apiRequest, setAccessToken } from '@/services/api';
+import { authenticationOtpFromNotification } from '@/services/notifications';
+import { isExpoGo } from '@/services/runtime';
 
 export default function OtpLoginScreen() {
   const [phone, setPhone] = useState('');
@@ -19,6 +21,37 @@ export default function OtpLoginScreen() {
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [telegramBusy, setTelegramBusy] = useState(false);
+
+  useEffect(() => {
+    if (!requested || isExpoGo()) return;
+
+    let disposed = false;
+    let subscription: { remove: () => void } | null = null;
+
+    void import('expo-notifications')
+      .then((Notifications) => {
+        if (disposed) return;
+
+        subscription = Notifications.addNotificationReceivedListener(
+          (notification) => {
+            const otp = authenticationOtpFromNotification(notification);
+            if (!otp || otp.phone !== phone) return;
+
+            setCode(otp.code);
+            setMessage('کد از PlayNexus Push دریافت شد و داخل OTP قرار گرفت.');
+            void Haptics.notificationAsync(
+              Haptics.NotificationFeedbackType.Success,
+            );
+          },
+        );
+      })
+      .catch(() => undefined);
+
+    return () => {
+      disposed = true;
+      subscription?.remove();
+    };
+  }, [phone, requested]);
 
   const request = async () => {
     if (!phone.trim()) return;
@@ -160,6 +193,8 @@ export default function OtpLoginScreen() {
               value.replace(/\D/g, '').slice(0, 6),
             )}
             keyboardType="number-pad"
+            autoComplete={Platform.OS === 'android' ? 'sms-otp' : 'one-time-code'}
+            textContentType="oneTimeCode"
             maxLength={6}
             placeholder="• • • • • •"
             placeholderTextColor={palette.textDim}
