@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { Platform, StyleSheet, Text, TextInput, View } from 'react-native';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import {
   AuthFieldLabel,
@@ -11,6 +11,9 @@ import {
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { fontWeight, palette, radii, spacing, typeScale } from '@/design';
 import { apiRequest, setAccessToken } from '@/services/api';
+import { getInstallationId } from '@/services/installation';
+import { authenticationOtpFromNotification } from '@/services/notifications';
+import { isExpoGo } from '@/services/runtime';
 
 export default function OtpLoginScreen() {
   const [phone, setPhone] = useState('');
@@ -18,6 +21,44 @@ export default function OtpLoginScreen() {
   const [requested, setRequested] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [telegramBusy, setTelegramBusy] = useState(false);
+
+  useEffect(() => {
+    if ((!requested && !busy) || isExpoGo()) return;
+
+    let disposed = false;
+    let subscription: { remove: () => void } | null = null;
+
+    void import('expo-notifications')
+      .then((Notifications) => {
+        if (disposed) return;
+
+        subscription = Notifications.addNotificationReceivedListener(
+          (notification) => {
+            const otp = authenticationOtpFromNotification(notification);
+            if (!otp || otp.phone !== phone) return;
+
+            void getInstallationId()
+              .then((installationId) => {
+                if (disposed || otp.installation_id !== installationId) return;
+
+                setCode(otp.code);
+                setMessage('کد از PlayNexus Push دریافت شد و داخل OTP قرار گرفت.');
+                void Haptics.notificationAsync(
+                  Haptics.NotificationFeedbackType.Success,
+                );
+              })
+              .catch(() => undefined);
+          },
+        );
+      })
+      .catch(() => undefined);
+
+    return () => {
+      disposed = true;
+      subscription?.remove();
+    };
+  }, [busy, phone, requested]);
 
   const request = async () => {
     if (!phone.trim()) return;
@@ -27,7 +68,13 @@ export default function OtpLoginScreen() {
     try {
       const result = await apiRequest<{ identifier: string; message: string }>(
         '/auth/passwordless/request',
-        { method: 'POST', body: JSON.stringify({ phone }) },
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            phone,
+            installation_id: await getInstallationId(),
+          }),
+        },
         { auth: false },
       );
       setPhone(result.identifier);
@@ -40,6 +87,39 @@ export default function OtpLoginScreen() {
       setMessage(value instanceof Error ? value.message : 'کد ارسال نشد.');
     } finally {
       setBusy(false);
+    }
+  };
+
+  const requestTelegram = async () => {
+    if (!requested || !phone.trim() || telegramBusy) return;
+
+    setTelegramBusy(true);
+    setMessage(null);
+
+    try {
+      const result = await apiRequest<{ identifier: string; message: string }>(
+        '/auth/passwordless/telegram',
+        {
+          method: 'POST',
+          body: JSON.stringify({ phone }),
+        },
+        { auth: false },
+      );
+
+      setPhone(result.identifier);
+      setMessage(result.message);
+      void Haptics.selectionAsync();
+    } catch (value) {
+      setMessage(
+        value instanceof Error
+          ? value.message
+          : 'ارسال کد از Telegram انجام نشد.',
+      );
+      void Haptics.notificationAsync(
+        Haptics.NotificationFeedbackType.Error,
+      );
+    } finally {
+      setTelegramBusy(false);
     }
   };
 
@@ -126,6 +206,8 @@ export default function OtpLoginScreen() {
               value.replace(/\D/g, '').slice(0, 6),
             )}
             keyboardType="number-pad"
+            autoComplete={Platform.OS === 'android' ? 'sms-otp' : 'one-time-code'}
+            textContentType="oneTimeCode"
             maxLength={6}
             placeholder="• • • • • •"
             placeholderTextColor={palette.textDim}
@@ -164,16 +246,35 @@ export default function OtpLoginScreen() {
       </PressableScale>
 
       {requested ? (
-        <PressableScale
-          haptic={false}
-          onPress={() => {
-            setRequested(false);
-            setCode('');
-            setMessage(null);
-          }}
-          style={authStyles.link}>
-          <Text style={authStyles.linkText}>شماره رو اشتباه زدی؟ تغییرش بده</Text>
-        </PressableScale>
+        <>
+          <View style={styles.telegramPanel}>
+            <View style={styles.telegramCopy}>
+              <Text style={styles.telegramTitle}>SMS نرسید؟</Text>
+              <Text style={styles.telegramText}>
+                اگر قبلاً Telegram را به همین حساب وصل کرده باشی، همان کد فعال را در چت خصوصی Bot می‌فرستیم.
+              </Text>
+            </View>
+            <PressableScale
+              disabled={busy || telegramBusy}
+              onPress={() => void requestTelegram()}
+              style={[styles.telegramButton, telegramBusy && styles.telegramDisabled]}>
+              <Text style={styles.telegramButtonText}>
+                {telegramBusy ? 'در حال بررسی…' : 'ارسال در Telegram'}
+              </Text>
+            </PressableScale>
+          </View>
+
+          <PressableScale
+            haptic={false}
+            onPress={() => {
+              setRequested(false);
+              setCode('');
+              setMessage(null);
+            }}
+            style={authStyles.link}>
+            <Text style={authStyles.linkText}>شماره رو اشتباه زدی؟ تغییرش بده</Text>
+          </PressableScale>
+        </>
       ) : (
         <PressableScale
           haptic={false}
@@ -277,5 +378,46 @@ const styles = StyleSheet.create({
   },
   codeStepActive: {
     backgroundColor: palette.blue,
+  },
+  telegramPanel: {
+    marginTop: spacing.sm,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(85,169,255,0.16)',
+    backgroundColor: 'rgba(85,169,255,0.035)',
+    padding: spacing.sm,
+    gap: spacing.sm,
+  },
+  telegramCopy: {
+    alignItems: 'flex-end',
+  },
+  telegramTitle: {
+    color: palette.text,
+    fontSize: typeScale.bodySm,
+    fontWeight: fontWeight.black,
+  },
+  telegramText: {
+    marginTop: 3,
+    color: palette.textMuted,
+    fontSize: 10,
+    lineHeight: 17,
+    textAlign: 'right',
+  },
+  telegramButton: {
+    minHeight: 46,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: 'rgba(85,169,255,0.22)',
+    backgroundColor: 'rgba(85,169,255,0.09)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  telegramDisabled: {
+    opacity: 0.55,
+  },
+  telegramButtonText: {
+    color: palette.blue,
+    fontSize: typeScale.caption,
+    fontWeight: fontWeight.black,
   },
 });
