@@ -18,6 +18,7 @@ export default function OtpLoginScreen() {
   const [requested, setRequested] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [telegramBusy, setTelegramBusy] = useState(false);
 
   const request = async () => {
     if (!phone.trim()) return;
