@@ -11,6 +11,7 @@ import {
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { fontWeight, palette, radii, spacing, typeScale } from '@/design';
 import { apiRequest, setAccessToken } from '@/services/api';
+import { getInstallationId } from '@/services/installation';
 import { authenticationOtpFromNotification } from '@/services/notifications';
 import { isExpoGo } from '@/services/runtime';
 
@@ -61,7 +62,13 @@ export default function OtpLoginScreen() {
     try {
       const result = await apiRequest<{ identifier: string; message: string }>(
         '/auth/passwordless/request',
-        { method: 'POST', body: JSON.stringify({ phone }) },
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            phone,
+            installation_id: await getInstallationId(),
+          }),
+        },
         { auth: false },
       );
       setPhone(result.identifier);
