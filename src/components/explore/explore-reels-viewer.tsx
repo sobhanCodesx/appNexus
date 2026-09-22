@@ -139,6 +139,31 @@ export function ExploreReelsViewer({
     }
   }, []);
 
+  const closeAndNavigate = useCallback((item: DiscoverItem) => {
+    const slug = slugOf(item);
+    if (!slug) return;
+
+    setComments(null);
+    onClose();
+
+    // Give React one frame to unmount the Modal/video player before the
+    // destination screen creates its own native decoder.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (item.kind === 'product_media') {
+          router.push({ pathname: '/product/[slug]', params: { slug } });
+          return;
+        }
+
+        router.push({ pathname: '/content/[slug]', params: { slug } });
+      });
+    });
+  }, [onClose]);
+
+  // React Native Modal can keep its React children alive while invisible.
+  // Returning null guarantees hidden Explore videos cannot keep playing.
+  if (!open || items.length === 0) return null;
+
   return (
     <Modal
       visible={open}
@@ -159,6 +184,7 @@ export function ExploreReelsViewer({
               height={height}
               bottomInset={Math.max(insets.bottom, 12)}
               onComments={(slug, enabled) => setComments({ slug, enabled })}
+              onOpenFull={closeAndNavigate}
             />
           )}
           pagingEnabled
@@ -186,8 +212,8 @@ export function ExploreReelsViewer({
           }}
           onEndReached={() => void onLoadMore()}
           onEndReachedThreshold={0.7}
-          windowSize={5}
-          maxToRenderPerBatch={3}
+          windowSize={3}
+          maxToRenderPerBatch={2}
           removeClippedSubviews
         />
 
@@ -228,12 +254,14 @@ function ExploreReelSlide({
   height,
   bottomInset,
   onComments,
+  onOpenFull,
 }: {
   item: DiscoverItem;
   active: boolean;
   height: number;
   bottomInset: number;
   onComments: (slug: string, enabled: boolean) => void;
+  onOpenFull: (item: DiscoverItem) => void;
 }) {
   const data = dataOf(item);
   const video = videoOf(item);
@@ -242,6 +270,7 @@ function ExploreReelSlide({
   const [liked, setLiked] = useState(Boolean(data.is_liked));
   const [likes, setLikes] = useState(Number(data.likes_count || 0));
   const [muted, setMuted] = useState(false);
+  const [leaving, setLeaving] = useState(false);
   const viewed = useRef(false);
 
   useEffect(() => {
@@ -300,14 +329,12 @@ function ExploreReelSlide({
   };
 
   const openFull = () => {
-    if (!slug) return;
+    if (!slug || leaving) return;
 
-    if (item.kind === 'product_media') {
-      router.push({ pathname: '/product/[slug]', params: { slug } });
-      return;
-    }
-
-    router.push({ pathname: '/content/[slug]', params: { slug } });
+    // Deactivate/unmount the Explore player before navigation. The viewer
+    // then closes before the destination page is allowed to create a player.
+    setLeaving(true);
+    requestAnimationFrame(() => onOpenFull(item));
   };
 
   const identity = data.channel?.name || data.game?.name || (item.kind === 'product_media' ? 'PlayNexus Store' : 'PlayNexus');
@@ -317,11 +344,11 @@ function ExploreReelSlide({
 
   return (
     <View style={[styles.slide, { height }]}>
-      {video ? (
+      {video && active && !leaving ? (
         <ExploreReelVideo
           source={String(video)}
           poster={image ? String(image) : null}
-          active={active}
+          active
           muted={muted}
         />
       ) : (
@@ -373,7 +400,7 @@ function ExploreReelSlide({
           <Text style={styles.price}>{Number(data.pricing.final_price).toLocaleString('fa-IR')} تومان</Text>
         ) : null}
 
-        <PressableScale onPress={openFull} style={styles.fullButton}>
+        <PressableScale disabled={leaving} onPress={openFull} style={styles.fullButton}>
           <Text style={styles.fullButtonText}>
             {item.kind === 'product_media' ? 'مشاهده محصول' : 'مشاهده کامل'}
           </Text>
@@ -451,6 +478,17 @@ function ExploreReelVideo({
       player.pause();
     }
   }, [active, player]);
+
+  useEffect(() => () => {
+    // Be explicit on Android: stop decoding and clear the source before
+    // useVideoPlayer releases the native object.
+    try {
+      player.pause();
+      player.replace(null, true);
+    } catch {
+      // The native player may already be released during a fast transition.
+    }
+  }, [player]);
 
   useEventListener(player, 'playToEnd', () => {
     if (active) player.play();
