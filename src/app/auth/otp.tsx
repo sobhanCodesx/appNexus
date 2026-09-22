@@ -331,4 +331,45 @@ const styles = StyleSheet.create({
   codeStepActive: {
     backgroundColor: palette.blue,
   },
+  telegramPanel: {
+    marginTop: spacing.sm,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(85,169,255,0.16)',
+    backgroundColor: 'rgba(85,169,255,0.035)',
+    padding: spacing.sm,
+    gap: spacing.sm,
+  },
+  telegramCopy: {
+    alignItems: 'flex-end',
+  },
+  telegramTitle: {
+    color: palette.text,
+    fontSize: typeScale.bodySm,
+    fontWeight: fontWeight.black,
+  },
+  telegramText: {
+    marginTop: 3,
+    color: palette.textMuted,
+    fontSize: 10,
+    lineHeight: 17,
+    textAlign: 'right',
+  },
+  telegramButton: {
+    minHeight: 46,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: 'rgba(85,169,255,0.22)',
+    backgroundColor: 'rgba(85,169,255,0.09)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  telegramDisabled: {
+    opacity: 0.55,
+  },
+  telegramButtonText: {
+    color: palette.blue,
+    fontSize: typeScale.caption,
+    fontWeight: fontWeight.black,
+  },
 });
