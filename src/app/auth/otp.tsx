@@ -198,16 +198,35 @@ export default function OtpLoginScreen() {
       </PressableScale>
 
       {requested ? (
-        <PressableScale
-          haptic={false}
-          onPress={() => {
-            setRequested(false);
-            setCode('');
-            setMessage(null);
-          }}
-          style={authStyles.link}>
-          <Text style={authStyles.linkText}>شماره رو اشتباه زدی؟ تغییرش بده</Text>
-        </PressableScale>
+        <>
+          <View style={styles.telegramPanel}>
+            <View style={styles.telegramCopy}>
+              <Text style={styles.telegramTitle}>SMS نرسید؟</Text>
+              <Text style={styles.telegramText}>
+                اگر قبلاً Telegram را به همین حساب وصل کرده باشی، همان کد فعال را در چت خصوصی Bot می‌فرستیم.
+              </Text>
+            </View>
+            <PressableScale
+              disabled={busy || telegramBusy}
+              onPress={() => void requestTelegram()}
+              style={[styles.telegramButton, telegramBusy && styles.telegramDisabled]}>
+              <Text style={styles.telegramButtonText}>
+                {telegramBusy ? 'در حال بررسی…' : 'ارسال در Telegram'}
+              </Text>
+            </PressableScale>
+          </View>
+
+          <PressableScale
+            haptic={false}
+            onPress={() => {
+              setRequested(false);
+              setCode('');
+              setMessage(null);
+            }}
+            style={authStyles.link}>
+            <Text style={authStyles.linkText}>شماره رو اشتباه زدی؟ تغییرش بده</Text>
+          </PressableScale>
+        </>
       ) : (
         <PressableScale
           haptic={false}
