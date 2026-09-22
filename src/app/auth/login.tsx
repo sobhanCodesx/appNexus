@@ -18,7 +18,7 @@ import {
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { Screen } from '@/components/ui/screen';
 import { fontFamily, fontWeight, layout, palette, radii, shadow, spacing, typeScale } from '@/design';
-import { apiRequest, setAccessToken } from '@/services/api';
+import { ApiError, apiRequest, setAccessToken } from '@/services/api';
 import { registerNativePushDevice } from '@/services/push';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -79,6 +79,33 @@ export default function LoginScreen() {
 
       await finishLogin(result);
     } catch (value) {
+      if (value instanceof ApiError && value.status === 409) {
+        const payload =
+          value.payload && typeof value.payload === 'object'
+            ? value.payload as {
+                code?: string;
+                channel?: 'email' | 'mobile';
+                identifier?: string;
+              }
+            : null;
+
+        if (
+          payload?.code === 'verification_required'
+          && (payload.channel === 'email' || payload.channel === 'mobile')
+          && typeof payload.identifier === 'string'
+          && payload.identifier
+        ) {
+          router.replace({
+            pathname: '/auth/verify',
+            params: {
+              channel: payload.channel,
+              identifier: payload.identifier,
+            },
+          });
+          return;
+        }
+      }
+
       setError(value instanceof Error ? value.message : 'ورود انجام نشد.');
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
@@ -219,7 +246,7 @@ export default function LoginScreen() {
             </PressableScale>
           </View>
 
-          <Text style={styles.note}>کد تأیید فقط هنگام ساخت حساب استفاده می‌شود؛ ورود با رمز مستقیم است.</Text>
+          <Text style={styles.note}>برای حساب تأییدشده، ورود با رمز مستقیم است؛ اگر ثبت‌نام ناقص باشد فقط همان مرحله تأیید ادامه پیدا می‌کند.</Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </Screen>
