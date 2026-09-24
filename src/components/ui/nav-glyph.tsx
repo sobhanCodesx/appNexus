@@ -2,7 +2,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { palette, shadow } from '@/design';
 
-type Name = 'home' | 'radar' | 'explore' | 'video' | 'profile';
+type Name = 'home' | 'radar' | 'ai' | 'explore' | 'video' | 'profile';
 
 export function NavGlyph({ name, active }: { name: Name; active: boolean }) {
   const color = active ? palette.white : palette.textDim;
@@ -11,10 +11,22 @@ export function NavGlyph({ name, active }: { name: Name; active: boolean }) {
     <View style={[styles.shell, active && styles.shellActive]}>
       {active ? <View style={styles.aura} /> : null}
       {name === 'radar' ? <Radar color={color} /> : null}
+      {name === 'ai' ? <Ai color={color} /> : null}
       {name === 'video' ? <Video color={color} /> : null}
       {name === 'profile' ? <Profile color={color} /> : null}
       {name === 'explore' ? <Explore color={color} /> : null}
       {name === 'home' ? <Home color={color} /> : null}
+    </View>
+  );
+}
+
+function Ai({ color }: { color: string }) {
+  return (
+    <View style={styles.ai}>
+      <View style={[styles.aiDiamond, { borderColor: color }]} />
+      <View style={[styles.aiCore, { backgroundColor: color }]} />
+      <View style={[styles.aiSparkTop, { backgroundColor: color }]} />
+      <View style={[styles.aiSparkSide, { backgroundColor: color }]} />
     </View>
   );
 }
@@ -80,6 +92,41 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(88,244,255,0.08)',
     borderWidth: 1,
     borderColor: 'rgba(88,244,255,0.18)',
+  },
+  ai: {
+    width: 23,
+    height: 23,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  aiDiamond: {
+    width: 15,
+    height: 15,
+    borderWidth: 1.8,
+    borderRadius: 5,
+    transform: [{ rotate: '45deg' }],
+  },
+  aiCore: {
+    position: 'absolute',
+    width: 4,
+    height: 4,
+    borderRadius: 4,
+  },
+  aiSparkTop: {
+    position: 'absolute',
+    width: 3,
+    height: 3,
+    borderRadius: 3,
+    top: 1,
+    right: 2,
+  },
+  aiSparkSide: {
+    position: 'absolute',
+    width: 2.5,
+    height: 2.5,
+    borderRadius: 3,
+    bottom: 2,
+    left: 1,
   },
   home: { width: 22, height: 22, alignItems: 'center', justifyContent: 'flex-end' },
   roof: {

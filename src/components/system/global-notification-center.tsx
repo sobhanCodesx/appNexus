@@ -84,6 +84,7 @@ export function GlobalNotificationCenter() {
   }, [sync]);
 
   if (!authenticated) return null;
+  if (pathname.startsWith('/nexus-ai') || pathname.startsWith('/notifications')) return null;
 
   const badge = unread > 99 ? '۹۹+' : unread.toLocaleString('fa-IR');
 

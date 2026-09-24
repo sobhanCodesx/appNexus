@@ -1,6 +1,5 @@
 import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { type Href, router, usePathname } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -15,18 +14,12 @@ import { getAppMeta, type MobileAppMeta } from '@/services/app-meta';
 import type { ProfilePayload } from '@/types/api';
 
 type DockItem = {
-  key: 'home' | 'radar' | 'explore' | 'video' | 'profile';
+  key: 'home' | 'radar' | 'ai' | 'explore' | 'video' | 'profile';
   label: string;
   href: Href;
 };
 
-const items: DockItem[] = [
-  { key: 'home', label: 'خانه', href: '/(tabs)' },
-  { key: 'radar', label: 'رادار', href: '/(tabs)/radar' },
-  { key: 'explore', label: 'کشف', href: '/(tabs)/explore' },
-  { key: 'video', label: 'ویدیو', href: '/(tabs)/videos' },
-  { key: 'profile', label: 'من', href: '/(tabs)/profile' },
-];function isHidden(pathname: string) {
+function isHidden(pathname: string) {
   return pathname.startsWith('/auth')
     || pathname.startsWith('/onboarding')
     || pathname.startsWith('/stories')
@@ -37,6 +30,7 @@ const items: DockItem[] = [
 function isActive(pathname: string, key: DockItem['key']) {
   if (key === 'home') return pathname === '/' || pathname === '/index';
   if (key === 'radar') return pathname.startsWith('/radar');
+  if (key === 'ai') return pathname.startsWith('/nexus-ai');
   if (key === 'explore') return pathname.startsWith('/explore');
   if (key === 'video') return pathname.startsWith('/videos');
   return pathname.startsWith('/profile');
@@ -54,7 +48,7 @@ export function GlobalAppDock() {
 
   useEffect(() => {
     let alive = true;
-    void getAppMeta()
+    void getAppMeta(true)
       .then((meta) => {
         if (alive) setNexusAi(meta.nexus_ai);
       })
@@ -99,32 +93,21 @@ export function GlobalAppDock() {
     insets.bottom + (Platform.OS === 'android' ? 8 : 6),
   );
 
-  const showNexusAi = Boolean(nexusAi?.enabled && nexusAi?.page_enabled);
+  const showNexusAi = Boolean(
+    nexusAi?.enabled && nexusAi?.page_enabled && nexusAi?.show_in_nav,
+  );
+  const items: DockItem[] = [
+    { key: 'home', label: 'خانه', href: '/(tabs)' },
+    showNexusAi
+      ? { key: 'ai', label: nexusAi?.nav_label || 'Nexus AI', href: '/nexus-ai' as Href }
+      : { key: 'radar', label: 'رادار', href: '/(tabs)/radar' },
+    { key: 'explore', label: 'کشف', href: '/(tabs)/explore' },
+    { key: 'video', label: 'ویدیو', href: '/(tabs)/videos' },
+    { key: 'profile', label: 'من', href: '/(tabs)/profile' },
+  ];
 
   return (
     <View pointerEvents="box-none" style={[styles.host, { bottom }]}>
-      {showNexusAi ? (
-        <PressableScale
-          accessibilityRole="button"
-          accessibilityLabel={nexusAi?.launcher_label || 'Nexus AI'}
-          haptic={false}
-          onPress={() => {
-            void Haptics.selectionAsync();
-            router.push('/nexus-ai' as Href);
-          }}
-          style={styles.aiLauncher}>
-          <LinearGradient
-            colors={['rgba(124,77,255,0.98)', 'rgba(28,200,255,0.96)']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
-          <View style={styles.aiOnlineDot} />
-          <Text style={styles.aiGlyph}>✦</Text>
-          <Text style={styles.aiText}>AI</Text>
-        </PressableScale>
-      ) : null}
-
       <View style={styles.dock}>
         <BlurView intensity={92} tint="dark" style={StyleSheet.absoluteFill} />
         <View style={styles.glow} />
@@ -197,46 +180,6 @@ function ProfileAvatar({
     right: 10,
     zIndex: 820,
     elevation: 22,
-  },
-  aiLauncher: {
-    position: 'absolute',
-    right: 8,
-    bottom: layout.tabBarHeight + 8,
-    width: 58,
-    height: 58,
-    borderRadius: 22,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.24)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 900,
-    elevation: 28,
-    ...shadow.cyanGlow,
-  },
-  aiOnlineDot: {
-    position: 'absolute',
-    top: 7,
-    right: 7,
-    width: 7,
-    height: 7,
-    borderRadius: 7,
-    backgroundColor: palette.success,
-    borderWidth: 1.5,
-    borderColor: 'rgba(8,12,20,0.92)',
-  },
-  aiGlyph: {
-    color: palette.white,
-    fontSize: 20,
-    lineHeight: 22,
-    marginTop: 2,
-  },
-  aiText: {
-    color: 'rgba(255,255,255,0.84)',
-    fontFamily: fontFamily.black,
-    fontSize: 7,
-    letterSpacing: 0.8,
-    marginTop: -1,
   },
   dock: {
     height: layout.tabBarHeight - 4,

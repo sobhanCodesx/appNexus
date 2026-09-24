@@ -3,7 +3,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { PageHeader } from '@/components/ui/page-header';
 import { PressableScale } from '@/components/ui/pressable-scale';
@@ -52,6 +52,15 @@ export default function VideosScreen() {
   }: {
     viewableItems: { item: ContentItem; isViewable?: boolean }[];
   }) => {
+    // Inline native video previews are intentionally disabled on Android.
+    // Rapidly recycled Media3/Surface instances were the source of the
+    // scroll-time native crash on the Watch feed. Android now keeps the list
+    // image-only and opens the real player only after the user taps a video.
+    if (Platform.OS === 'android') {
+      setActivePreviewId(null);
+      return;
+    }
+
     const candidate = viewableItems
       .find((token) => token.isViewable && Boolean(videoPreviewUrl(token.item)));
     setActivePreviewId(candidate?.item.id ?? null);
@@ -69,7 +78,10 @@ export default function VideosScreen() {
         data={rest}
         keyExtractor={(item) => String(item.id)}
         renderItem={({ item }) => (
-          <VideoRow item={item} previewActive={activePreviewId === item.id} />
+          <VideoRow
+            item={item}
+            previewActive={Platform.OS !== 'android' && activePreviewId === item.id}
+          />
         )}
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={previewViewabilityConfig}
@@ -87,7 +99,7 @@ export default function VideosScreen() {
               <VideoPageSkeleton />
             ) : (
               <>
-                <GameLogoCloud videos={videos} />
+                <GameLogoCloud videos={videos.slice(0, 12)} />
 
                 {featured ? (
                   <View style={styles.featuredWrap}>
@@ -133,7 +145,8 @@ export default function VideosScreen() {
         refreshing={refreshing}
         onRefresh={refresh}
         onEndReached={() => void loadMore()}
-        onEndReachedThreshold={0.45}
+        onEndReachedThreshold={0.30}
+        drawDistance={520}
         ListFooterComponent={loadingMore ? <LoadingMore /> : null}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
@@ -174,6 +187,7 @@ function GameLogoCloud({ videos }: { videos: ContentItem[] }) {
                 style={StyleSheet.absoluteFill}
                 contentFit="cover"
                 cachePolicy="memory-disk"
+                recyclingKey={'video-cloud-' + String(video.id)}
               />
               <LinearGradient
                 colors={['rgba(3,5,9,0.03)', 'rgba(3,5,9,0.70)']}
@@ -228,7 +242,13 @@ function VideoRow({ item, previewActive }: { item: ContentItem; previewActive: b
       pressedScale={0.99}
       style={styles.videoRow}>
       <View style={styles.thumb}>
-        <Image source={thumbnail ? { uri: String(thumbnail) } : fallback} style={StyleSheet.absoluteFill} contentFit="cover" />
+        <Image
+          source={thumbnail ? { uri: String(thumbnail) } : fallback}
+          style={StyleSheet.absoluteFill}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          recyclingKey={'video-thumb-' + String(item.id)}
+        />
         <VideoPreviewSurface item={item} active={previewActive} />
         <LinearGradient colors={['rgba(3,5,9,0.00)', 'rgba(3,5,9,0.36)']} style={StyleSheet.absoluteFill} />
         {!previewActive ? <View style={styles.thumbPlay}><Text style={styles.thumbPlayText}>▶</Text></View> : null}
@@ -243,7 +263,13 @@ function VideoRow({ item, previewActive }: { item: ContentItem; previewActive: b
           </Text>
         </View>
         <View style={styles.gameLogoShell}>
-          <Image source={logo ? { uri: String(logo) } : fallback} style={styles.gameLogo} contentFit="cover" />
+          <Image
+            source={logo ? { uri: String(logo) } : fallback}
+            style={styles.gameLogo}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            recyclingKey={'video-logo-' + String(item.id)}
+          />
         </View>
       </View>
     </PressableScale>

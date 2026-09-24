@@ -35,7 +35,13 @@ export function VideoPreviewSurface({
 }) {
   const source = videoPreviewUrl(item);
 
-  if (!active || !source || item.type !== 'video') return null;
+  // Do not create inline Media3 players inside recycled Android feeds.
+  // Even a single rapidly replaced decoder/surface can crash the process on
+  // some devices while FlashList is flinging. Android uses the poster in list
+  // views and creates the real player only on the dedicated content screen.
+  if (Platform.OS === 'android' || !active || !source || item.type !== 'video') {
+    return null;
+  }
 
   return <PreviewPlayer key={source} source={String(source)} compact={compact} />;
 }
@@ -101,7 +107,6 @@ function PreviewPlayer({ source, compact }: { source: string; compact: boolean }
         style={StyleSheet.absoluteFill}
         contentFit="cover"
         nativeControls={false}
-        surfaceType={Platform.OS === 'android' ? 'textureView' : undefined}
       />
 
       <View style={[styles.badge, compact && styles.badgeCompact]}>
