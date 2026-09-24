@@ -2,7 +2,7 @@
   "expo": {
     "name": "PlayNexus",
     "slug": "playnexus",
-    "version": "1.0.0",
+    "version": "1.0.3",
     "orientation": "portrait",
     "icon": "./assets/images/playnexus-app-icon.png",
     "scheme": "playnexus",
@@ -18,6 +18,7 @@
     },
     "android": {
       "package": "com.playnexus.app",
+      "versionCode": 4,
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#030712",
