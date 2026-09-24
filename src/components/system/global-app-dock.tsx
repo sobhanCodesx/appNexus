@@ -1,5 +1,6 @@
 import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { type Href, router, usePathname } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -10,6 +11,7 @@ import { NavGlyph } from '@/components/ui/nav-glyph';
 import { PressableScale } from '@/components/ui/pressable-scale';
 import { fontFamily, fontWeight, layout, palette, radii, shadow } from '@/design';
 import { apiRequest, getAccessToken } from '@/services/api';
+import { getAppMeta, type MobileAppMeta } from '@/services/app-meta';
 import type { ProfilePayload } from '@/types/api';
 
 type DockItem = {
@@ -28,7 +30,8 @@ const items: DockItem[] = [
   return pathname.startsWith('/auth')
     || pathname.startsWith('/onboarding')
     || pathname.startsWith('/stories')
-    || pathname.startsWith('/shorts');
+    || pathname.startsWith('/shorts')
+    || pathname.startsWith('/nexus-ai');
 }
 
 function isActive(pathname: string, key: DockItem['key']) {
@@ -47,6 +50,20 @@ export function GlobalAppDock() {
     avatar?: string | null;
     name?: string | null;
   }>({ loggedIn: false });
+  const [nexusAi, setNexusAi] = useState<MobileAppMeta['nexus_ai']>();
+
+  useEffect(() => {
+    let alive = true;
+    void getAppMeta()
+      .then((meta) => {
+        if (alive) setNexusAi(meta.nexus_ai);
+      })
+      .catch(() => undefined);
+
+    return () => {
+      alive = false;
+    };
+  }, [pathname]);
 
   useEffect(() => {
     let mounted = true;
@@ -82,8 +99,32 @@ export function GlobalAppDock() {
     insets.bottom + (Platform.OS === 'android' ? 8 : 6),
   );
 
+  const showNexusAi = Boolean(nexusAi?.enabled && nexusAi?.page_enabled);
+
   return (
     <View pointerEvents="box-none" style={[styles.host, { bottom }]}>
+      {showNexusAi ? (
+        <PressableScale
+          accessibilityRole="button"
+          accessibilityLabel={nexusAi?.launcher_label || 'Nexus AI'}
+          haptic={false}
+          onPress={() => {
+            void Haptics.selectionAsync();
+            router.push('/nexus-ai' as Href);
+          }}
+          style={styles.aiLauncher}>
+          <LinearGradient
+            colors={['rgba(124,77,255,0.98)', 'rgba(28,200,255,0.96)']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={styles.aiOnlineDot} />
+          <Text style={styles.aiGlyph}>✦</Text>
+          <Text style={styles.aiText}>AI</Text>
+        </PressableScale>
+      ) : null}
+
       <View style={styles.dock}>
         <BlurView intensity={92} tint="dark" style={StyleSheet.absoluteFill} />
         <View style={styles.glow} />
@@ -156,6 +197,46 @@ function ProfileAvatar({
     right: 10,
     zIndex: 820,
     elevation: 22,
+  },
+  aiLauncher: {
+    position: 'absolute',
+    right: 8,
+    bottom: layout.tabBarHeight + 8,
+    width: 58,
+    height: 58,
+    borderRadius: 22,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.24)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 900,
+    elevation: 28,
+    ...shadow.cyanGlow,
+  },
+  aiOnlineDot: {
+    position: 'absolute',
+    top: 7,
+    right: 7,
+    width: 7,
+    height: 7,
+    borderRadius: 7,
+    backgroundColor: palette.success,
+    borderWidth: 1.5,
+    borderColor: 'rgba(8,12,20,0.92)',
+  },
+  aiGlyph: {
+    color: palette.white,
+    fontSize: 20,
+    lineHeight: 22,
+    marginTop: 2,
+  },
+  aiText: {
+    color: 'rgba(255,255,255,0.84)',
+    fontFamily: fontFamily.black,
+    fontSize: 7,
+    letterSpacing: 0.8,
+    marginTop: -1,
   },
   dock: {
     height: layout.tabBarHeight - 4,

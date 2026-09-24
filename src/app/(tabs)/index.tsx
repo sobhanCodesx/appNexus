@@ -348,6 +348,7 @@ export default function HomeScreen() {
                     caption="چی داره میاد؟"
                     symbol="◎"
                     tone="cyan"
+                    imageUrl={data.quick_portal_thumbnails?.radar || radar[0]?.banner_url || radar[0]?.cover_url}
                     onPress={() => router.push('/(tabs)/radar')}
                   />
                   <QuickPortal
@@ -355,6 +356,7 @@ export default function HomeScreen() {
                     caption="سریع ببین"
                     symbol="▶"
                     tone="magenta"
+                    imageUrl={data.quick_portal_thumbnails?.shorts || latestVideos[0]?.thumbnail_url || latestVideos[0]?.image_url}
                     onPress={() => router.push('/shorts')}
                   />
                   <QuickPortal
@@ -362,6 +364,7 @@ export default function HomeScreen() {
                     caption="چیز تازه کشف کن"
                     symbol="◇"
                     tone="violet"
+                    imageUrl={data.quick_portal_thumbnails?.explore || data.fresh_content?.[0]?.image_url || feed[0]?.thumbnail_url || feed[0]?.image_url}
                     onPress={() => router.push('/(tabs)/explore')}
                   />
                   <QuickPortal
@@ -369,6 +372,7 @@ export default function HomeScreen() {
                     caption="خرید و پیشنهادها"
                     symbol="▣"
                     tone="blue"
+                    imageUrl={data.quick_portal_thumbnails?.store || storePicks[0]?.cover_url}
                     onPress={() => router.push('/store')}
                   />
                 </ScrollView>

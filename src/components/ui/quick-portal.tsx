@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -32,12 +33,14 @@ export function QuickPortal({
   title,
   caption,
   symbol,
+  imageUrl,
   tone = 'blue',
   onPress,
 }: {
   title: string;
   caption: string;
   symbol: string;
+  imageUrl?: string | null;
   tone?: Tone;
   onPress: () => void;
 }) {
@@ -45,12 +48,24 @@ export function QuickPortal({
 
   return (
     <PressableScale onPress={onPress} pressedScale={0.975} style={styles.root}>
+      {imageUrl ? (
+        <Image
+          source={{ uri: imageUrl }}
+          style={StyleSheet.absoluteFill}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          transition={160}
+        />
+      ) : null}
       <LinearGradient
-        colors={theme.gradient}
+        colors={imageUrl
+          ? ['rgba(3,5,9,0.18)', 'rgba(3,5,9,0.90)']
+          : theme.gradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFill}
       />
+      {imageUrl ? <View style={[styles.tint, { backgroundColor: theme.accent }]} /> : null}
       <View style={[styles.signalLine, { backgroundColor: theme.accent }]} />
 
       <View style={[styles.symbolWrap, { borderColor: theme.accent + '44' }]}>
@@ -80,6 +95,14 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     padding: spacing.sm,
     ...shadow.soft,
+  },
+  tint: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    opacity: 0.08,
   },
   signalLine: {
     position: 'absolute',

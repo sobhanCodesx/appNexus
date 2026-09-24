@@ -2,7 +2,7 @@ import { useEventListener } from 'expo';
 import { useFocusEffect } from 'expo-router';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { useCallback, useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 
 import { fontFamily, fontWeight, palette, radii } from '@/design';
 import type { ContentCard } from '@/types/api';
@@ -47,9 +47,8 @@ function PreviewPlayer({ source, compact }: { source: string; compact: boolean }
   const player = useVideoPlayer({ uri: source }, (instance) => {
     instance.muted = true;
     instance.loop = false;
-    instance.timeUpdateEventInterval = 0.12;
+    instance.timeUpdateEventInterval = 0.25;
     instance.currentTime = 0;
-    instance.play();
   });
 
   useFocusEffect(
@@ -71,6 +70,19 @@ function PreviewPlayer({ source, compact }: { source: string; compact: boolean }
     return () => clearTimeout(timer);
   }, [player]);
 
+  useEffect(() => () => {
+    // Android can keep a decoder/surface alive for a short time after a
+    // recycled FlashList row disappears. Explicitly detach the source before
+    // useVideoPlayer releases the native player so fast scrolling never
+    // accumulates decoders.
+    try {
+      player.pause();
+      player.replace(null, true);
+    } catch {
+      // The native object may already be released during a fast list recycle.
+    }
+  }, [player]);
+
   useEventListener(player, 'timeUpdate', ({ currentTime }) => {
     const duration = player.duration || 0;
     const previewDuration = Math.min(duration || 8, 8);
@@ -89,6 +101,7 @@ function PreviewPlayer({ source, compact }: { source: string; compact: boolean }
         style={StyleSheet.absoluteFill}
         contentFit="cover"
         nativeControls={false}
+        surfaceType={Platform.OS === 'android' ? 'textureView' : undefined}
       />
 
       <View style={[styles.badge, compact && styles.badgeCompact]}>

@@ -221,6 +221,12 @@ export type HomePayload = {
   latest_games?: HomeGame[];
   nexus_latest?: NexusLatestItem[];
   game_radar?: GameRadarItem[];
+  quick_portal_thumbnails?: {
+    radar?: ImageUrl;
+    shorts?: ImageUrl;
+    explore?: ImageUrl;
+    store?: ImageUrl;
+  };
   latest_studios?: StudioCard[];
   content_sections?: HomeContentSection[];
   fresh_content?: HomeMixedItem[];

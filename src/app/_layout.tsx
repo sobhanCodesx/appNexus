@@ -99,6 +99,7 @@ export default function RootLayout() {
           <Stack.Screen name="search" options={{ animation: 'fade_from_bottom' }} />
           <Stack.Screen name="shorts" options={{ animation: 'fade' }} />
           <Stack.Screen name="stories" options={{ animation: 'fade' }} />
+          <Stack.Screen name="nexus-ai" options={{ animation: 'slide_from_bottom' }} />
           <Stack.Screen name="content/[slug]" options={{ animation: 'slide_from_right' }} />
           <Stack.Screen name="product/[slug]" options={{ animation: 'slide_from_right' }} />
           <Stack.Screen name="channel/[slug]" options={{ animation: 'slide_from_right' }} />
