@@ -1,46 +1,71 @@
 import { StyleSheet, View } from 'react-native';
 
-import { palette } from '@/design';
+import { palette, shadow } from '@/design';
 
-type Name = 'home' | 'radar' | 'explore' | 'video' | 'profile';
+type Name = 'home' | 'radar' | 'ai' | 'explore' | 'video' | 'profile';
 
 export function NavGlyph({ name, active }: { name: Name; active: boolean }) {
   const color = active ? palette.white : palette.textDim;
 
-  if (name === 'radar') {
-    return (
-      <View style={[styles.radarOuter, { borderColor: color }]}>
-        <View style={[styles.radarInner, { borderColor: color }]} />
-        <View style={[styles.dot, { backgroundColor: color }]} />
-      </View>
-    );
-  }
+  return (
+    <View style={[styles.shell, active && styles.shellActive]}>
+      {active ? <View style={styles.aura} /> : null}
+      {name === 'radar' ? <Radar color={color} /> : null}
+      {name === 'ai' ? <Ai color={color} /> : null}
+      {name === 'video' ? <Video color={color} /> : null}
+      {name === 'profile' ? <Profile color={color} /> : null}
+      {name === 'explore' ? <Explore color={color} /> : null}
+      {name === 'home' ? <Home color={color} /> : null}
+    </View>
+  );
+}
 
-  if (name === 'video') {
-    return (
-      <View style={[styles.video, { borderColor: color }]}>
-        <View style={[styles.play, { borderLeftColor: color }]} />
-      </View>
-    );
-  }
+function Ai({ color }: { color: string }) {
+  return (
+    <View style={styles.ai}>
+      <View style={[styles.aiDiamond, { borderColor: color }]} />
+      <View style={[styles.aiCore, { backgroundColor: color }]} />
+      <View style={[styles.aiSparkTop, { backgroundColor: color }]} />
+      <View style={[styles.aiSparkSide, { backgroundColor: color }]} />
+    </View>
+  );
+}
 
-  if (name === 'profile') {
-    return (
-      <View style={styles.profile}>
-        <View style={[styles.head, { borderColor: color }]} />
-        <View style={[styles.shoulders, { borderColor: color }]} />
-      </View>
-    );
-  }
+function Radar({ color }: { color: string }) {
+  return (
+    <View style={[styles.radarOuter, { borderColor: color }]}>
+      <View style={[styles.radarInner, { borderColor: color }]} />
+      <View style={[styles.dot, { backgroundColor: color }]} />
+    </View>
+  );
+}
 
-  if (name === 'explore') {
-    return (
-      <View style={[styles.explore, { borderColor: color }]}>
-        <View style={[styles.exploreDot, { backgroundColor: color }]} />
-      </View>
-    );
-  }
+function Video({ color }: { color: string }) {
+  return (
+    <View style={[styles.video, { borderColor: color }]}>
+      <View style={[styles.play, { borderLeftColor: color }]} />
+    </View>
+  );
+}
 
+function Profile({ color }: { color: string }) {
+  return (
+    <View style={styles.profile}>
+      <View style={[styles.head, { borderColor: color }]} />
+      <View style={[styles.shoulders, { borderColor: color }]} />
+    </View>
+  );
+}
+
+function Explore({ color }: { color: string }) {
+  return (
+    <View style={[styles.explore, { borderColor: color }]}>
+      <View style={[styles.exploreDot, { backgroundColor: color }]} />
+    </View>
+  );
+}
+
+function Home({ color }: { color: string }) {
   return (
     <View style={styles.home}>
       <View style={[styles.roof, { borderBottomColor: color }]} />
@@ -50,29 +75,89 @@ export function NavGlyph({ name, active }: { name: Name; active: boolean }) {
 }
 
 const styles = StyleSheet.create({
-  home: { width: 24, height: 24, alignItems: 'center', justifyContent: 'flex-end' },
-  roof: {
-    width: 0,
-    height: 0,
-    borderLeftWidth: 10,
-    borderRightWidth: 10,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderBottomWidth: 9,
-    marginBottom: -1,
-  },
-  house: { width: 17, height: 13, borderWidth: 2, borderRadius: 4 },
-  radarOuter: {
-    width: 23,
-    height: 23,
-    borderRadius: 99,
-    borderWidth: 2,
+  shell: {
+    width: 34,
+    height: 28,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  radarInner: { width: 10, height: 10, borderRadius: 99, borderWidth: 2 },
-  dot: { position: 'absolute', width: 4, height: 4, borderRadius: 9, top: 2, right: 5 },
-  video: { width: 24, height: 18, borderRadius: 5, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
+  shellActive: {
+    ...shadow.cyanGlow,
+  },
+  aura: {
+    position: 'absolute',
+    width: 34,
+    height: 27,
+    borderRadius: 14,
+    backgroundColor: 'rgba(88,244,255,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(88,244,255,0.18)',
+  },
+  ai: {
+    width: 23,
+    height: 23,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  aiDiamond: {
+    width: 15,
+    height: 15,
+    borderWidth: 1.8,
+    borderRadius: 5,
+    transform: [{ rotate: '45deg' }],
+  },
+  aiCore: {
+    position: 'absolute',
+    width: 4,
+    height: 4,
+    borderRadius: 4,
+  },
+  aiSparkTop: {
+    position: 'absolute',
+    width: 3,
+    height: 3,
+    borderRadius: 3,
+    top: 1,
+    right: 2,
+  },
+  aiSparkSide: {
+    position: 'absolute',
+    width: 2.5,
+    height: 2.5,
+    borderRadius: 3,
+    bottom: 2,
+    left: 1,
+  },
+  home: { width: 22, height: 22, alignItems: 'center', justifyContent: 'flex-end' },
+  roof: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 9,
+    borderRightWidth: 9,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomWidth: 8,
+    marginBottom: -1,
+  },
+  house: { width: 16, height: 12, borderWidth: 1.8, borderRadius: 4 },
+  radarOuter: {
+    width: 21,
+    height: 21,
+    borderRadius: 99,
+    borderWidth: 1.8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radarInner: { width: 9, height: 9, borderRadius: 99, borderWidth: 1.6 },
+  dot: { position: 'absolute', width: 4, height: 4, borderRadius: 9, top: 1, right: 4 },
+  video: {
+    width: 22,
+    height: 17,
+    borderRadius: 5,
+    borderWidth: 1.8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   play: {
     width: 0,
     height: 0,
@@ -82,9 +167,30 @@ const styles = StyleSheet.create({
     borderBottomColor: 'transparent',
     borderLeftWidth: 7,
   },
-  profile: { width: 24, height: 24, alignItems: 'center' },
-  head: { width: 9, height: 9, borderRadius: 9, borderWidth: 2 },
-  shoulders: { width: 20, height: 11, borderTopLeftRadius: 11, borderTopRightRadius: 11, borderWidth: 2, borderBottomWidth: 0, marginTop: 3 },
-  explore: { width: 22, height: 22, borderWidth: 2, borderRadius: 7, alignItems: 'center', justifyContent: 'center' },
-  exploreDot: { width: 6, height: 6, borderRadius: 6 },
+  profile: { width: 22, height: 22, alignItems: 'center' },
+  head: { width: 8, height: 8, borderRadius: 9, borderWidth: 1.8 },
+  shoulders: {
+    width: 18,
+    height: 10,
+    borderTopLeftRadius: 10,
+    borderTopRightRadius: 10,
+    borderWidth: 1.8,
+    borderBottomWidth: 0,
+    marginTop: 3,
+  },
+  explore: {
+    width: 20,
+    height: 20,
+    borderWidth: 1.8,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    transform: [{ rotate: '45deg' }],
+  },
+  exploreDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 6,
+    transform: [{ rotate: '-45deg' }],
+  },
 });

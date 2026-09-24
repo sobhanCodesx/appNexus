@@ -4,6 +4,18 @@ import { PLAYNEXUS_API_URL } from '@/config/app';
 
 const TOKEN_KEY = 'playnexus.mobile-access-token.v1';
 
+type AccessTokenListener = (token: string | null) => void;
+const accessTokenListeners = new Set<AccessTokenListener>();
+
+function emitAccessTokenChange(token: string | null) {
+  for (const listener of accessTokenListeners) listener(token);
+}
+
+export function subscribeToAccessTokenChanges(listener: AccessTokenListener) {
+  accessTokenListeners.add(listener);
+  return () => accessTokenListeners.delete(listener);
+}
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -21,10 +33,24 @@ export async function getAccessToken() {
 export async function setAccessToken(token: string | null) {
   if (token) {
     await SecureStore.setItemAsync(TOKEN_KEY, token);
+    emitAccessTokenChange(token);
     return;
   }
 
   await SecureStore.deleteItemAsync(TOKEN_KEY);
+  emitAccessTokenChange(null);
+}
+
+async function parseResponse(response: Response) {
+  const text = await response.text();
+
+  if (!text) return null;
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { message: text.slice(0, 500) };
+  }
 }
 
 export async function apiRequest<T>(
@@ -34,33 +60,75 @@ export async function apiRequest<T>(
 ): Promise<T> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), options.timeoutMs ?? 12000);
-  const token = options.auth === false ? null : await getAccessToken();
+  let token = options.auth === false ? null : await getAccessToken();
 
   try {
     const isMultipart = typeof FormData !== 'undefined' && init.body instanceof FormData;
+    const method = String(init.method || 'GET').toUpperCase();
 
-    const response = await fetch(PLAYNEXUS_API_URL + path, {
-      ...init,
-      signal: controller.signal,
-      headers: {
-        Accept: 'application/json',
-        ...(isMultipart ? {} : { 'Content-Type': 'application/json' }),
-        ...(token ? { Authorization: 'Bearer ' + token } : {}),
-        ...(init.headers ?? {}),
-      },
-    });
+    const request = async (accessToken: string | null) => {
+      const response = await fetch(PLAYNEXUS_API_URL + path, {
+        ...init,
+        signal: controller.signal,
+        headers: {
+          Accept: 'application/json',
+          ...(isMultipart ? {} : { 'Content-Type': 'application/json' }),
+          ...(accessToken ? { Authorization: 'Bearer ' + accessToken } : {}),
+          ...(init.headers ?? {}),
+        },
+      });
 
-    const payload = await response.json().catch(() => null);
+      return {
+        response,
+        payload: await parseResponse(response),
+      };
+    };
 
-    if (!response.ok) {
+    let result = await request(token);
+
+    // A dev build can retain a bearer token issued by another backend or an
+    // older PlayNexus session. Public GET endpoints such as /home are allowed
+    // to continue as guest, so recover once without the stale token.
+    if (
+      result.response.status === 401
+      && token
+      && options.auth !== false
+      && (method === 'GET' || method === 'HEAD')
+    ) {
+      await setAccessToken(null);
+      token = null;
+      result = await request(null);
+    }
+
+    if (!result.response.ok) {
+      const serverMessage =
+        typeof result.payload?.message === 'string'
+          ? result.payload.message
+          : 'درخواست به PlayNexus ناموفق بود.';
+
+      const debugSuffix = __DEV__
+        ? ` (HTTP ${result.response.status} · ${PLAYNEXUS_API_URL}${path})`
+        : '';
+
       throw new ApiError(
-        typeof payload?.message === 'string' ? payload.message : 'درخواست به PlayNexus ناموفق بود.',
-        response.status,
-        payload,
+        serverMessage + debugSuffix,
+        result.response.status,
+        result.payload,
       );
     }
 
-    return payload as T;
+    return result.payload as T;
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+
+    const timedOut = error instanceof Error && error.name === 'AbortError';
+    throw new ApiError(
+      timedOut
+        ? `اتصال به PlayNexus API زمان‌بر شد. (${PLAYNEXUS_API_URL}${path})`
+        : `اتصال به PlayNexus API برقرار نشد. (${PLAYNEXUS_API_URL}${path})`,
+      0,
+      { base_url: PLAYNEXUS_API_URL },
+    );
   } finally {
     clearTimeout(timeout);
   }

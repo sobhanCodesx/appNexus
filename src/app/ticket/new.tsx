@@ -27,7 +27,20 @@ type MediaAsset = {
   type?: 'image' | 'video';
 };
 
+type PurchaseItem = {
+  id: number;
+  title: string;
+  variant_name?: string | null;
+  quantity?: number;
+  cover_url?: string | null;
+  order?: { id: number; number: string; created_at?: string | null };
+};
+
 type CreateContext = {
+  purchases?: {
+    data: PurchaseItem[];
+    total?: number;
+  };
   exchange_product?: {
     id: number;
     title: string;
@@ -48,10 +61,12 @@ export default function NewTicketScreen() {
     : '/tickets/create-context';
 
   const { data: context } = useApiResource<CreateContext>(contextPath, {
+    purchases: { data: [] },
     exchange_product: null,
   });
 
   const [subject, setSubject] = useState('');
+  const [orderItemId, setOrderItemId] = useState<number | null>(null);
   const [tradeTitle, setTradeTitle] = useState('');
   const [message, setMessage] = useState('');
   const [media, setMedia] = useState<MediaAsset[]>([]);
@@ -61,8 +76,8 @@ export default function NewTicketScreen() {
   const canSubmit = useMemo(() => {
     if (message.trim().length < 10) return false;
     if (exchange) return tradeTitle.trim().length >= 2 && media.length > 0;
-    return subject.trim().length > 0;
-  }, [exchange, media.length, message, subject, tradeTitle]);
+    return Boolean(orderItemId) || subject.trim().length > 0;
+  }, [exchange, media.length, message, orderItemId, subject, tradeTitle]);
 
   const pickMedia = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -121,12 +136,35 @@ export default function NewTicketScreen() {
           { method: 'POST', body: form },
           { timeoutMs: 90_000 },
         );
+      } else if (media.length) {
+        const form = new FormData();
+        form.append('type', 'support');
+        if (orderItemId) form.append('order_item_id', String(orderItemId));
+        if (subject.trim()) form.append('subject', subject.trim());
+        form.append('message', message.trim());
+
+        media.forEach((asset, index) => {
+          const extension = asset.fileName?.split('.').pop()
+            || (asset.type === 'video' ? 'mp4' : 'jpg');
+          form.append('attachments[]', {
+            uri: asset.uri,
+            name: asset.fileName || `playnexus-support-${Date.now()}-${index}.${extension}`,
+            type: asset.mimeType || (asset.type === 'video' ? 'video/mp4' : 'image/jpeg'),
+          } as never);
+        });
+
+        result = await apiRequest<{ ticket: { id: number } }>(
+          '/tickets',
+          { method: 'POST', body: form },
+          { timeoutMs: 90_000 },
+        );
       } else {
         result = await apiRequest<{ ticket: { id: number } }>('/tickets', {
           method: 'POST',
           body: JSON.stringify({
             type: 'support',
-            subject: subject.trim(),
+            order_item_id: orderItemId,
+            subject: subject.trim() || null,
             message: message.trim(),
           }),
         });
@@ -179,6 +217,41 @@ export default function NewTicketScreen() {
             </View>
           ) : null}
 
+          {!exchange && (context.purchases?.data || []).length ? (
+            <View style={styles.purchaseSection}>
+              <View style={styles.purchaseHeading}>
+                <Text style={styles.purchaseKicker}>RELATED PURCHASE</Text>
+                <Text style={styles.purchaseTitle}>این تیکت مربوط به کدوم خریده؟</Text>
+                <Text style={styles.purchaseHint}>اختیاریه؛ انتخابش کنی پشتیبانی سریع‌تر زمینه مشکل رو می‌بینه.</Text>
+              </View>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.purchaseRail}>
+                <PressableScale
+                  onPress={() => setOrderItemId(null)}
+                  style={[styles.purchaseCard, !orderItemId && styles.purchaseCardActive]}>
+                  <View style={styles.purchaseNoImage}><Text style={styles.purchaseNoImageText}>?</Text></View>
+                  <Text style={styles.purchaseCardTitle}>بدون سفارش</Text>
+                </PressableScale>
+                {(context.purchases?.data || []).map((item) => (
+                  <PressableScale
+                    key={item.id}
+                    onPress={() => setOrderItemId(item.id)}
+                    style={[styles.purchaseCard, orderItemId === item.id && styles.purchaseCardActive]}>
+                    {item.cover_url ? (
+                      <Image source={{ uri: item.cover_url }} style={styles.purchaseImage} contentFit="cover" cachePolicy="memory-disk" />
+                    ) : (
+                      <View style={styles.purchaseNoImage}><Text style={styles.purchaseNoImageText}>▣</Text></View>
+                    )}
+                    <Text numberOfLines={2} style={styles.purchaseCardTitle}>{item.title}</Text>
+                    <Text style={styles.purchaseCardMeta}>{item.order?.number || 'ORDER'}</Text>
+                  </PressableScale>
+                ))}
+              </ScrollView>
+            </View>
+          ) : null}
+
           {exchange ? (
             <TextInput
               value={tradeTitle}
@@ -214,13 +287,16 @@ export default function NewTicketScreen() {
             style={[styles.input, styles.message]}
           />
 
-          {exchange ? (
-            <>
+          <>
               <View style={styles.mediaHeader}>
                 <Chip label={media.length + ' / 5'} active={media.length > 0} />
                 <View style={styles.mediaHeaderCopy}>
-                  <Text style={styles.mediaTitle}>عکس یا ویدیو واقعی کالا</Text>
-                  <Text style={styles.mediaHint}>حداقل یک فایل؛ حداکثر ۵ فایل</Text>
+                  <Text style={styles.mediaTitle}>
+                    {exchange ? 'عکس یا ویدیو واقعی کالا' : 'فایل ضمیمه'}
+                  </Text>
+                  <Text style={styles.mediaHint}>
+                    {exchange ? 'حداقل یک فایل؛ حداکثر ۵ فایل' : 'اختیاری؛ عکس یا ویدیو، حداکثر ۵ فایل'}
+                  </Text>
                 </View>
               </View>
 
@@ -252,8 +328,7 @@ export default function NewTicketScreen() {
                   </View>
                 ))}
               </ScrollView>
-            </>
-          ) : null}
+          </>
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
@@ -303,6 +378,79 @@ const styles = StyleSheet.create({
     paddingHorizontal: layout.screenPadding,
     paddingBottom: 80,
     gap: spacing.sm,
+  },
+  purchaseSection: {
+    marginBottom: spacing.sm,
+  },
+  purchaseHeading: {
+    alignItems: 'flex-end',
+    marginBottom: spacing.sm,
+  },
+  purchaseKicker: {
+    color: palette.cyan,
+    fontSize: 8,
+    fontWeight: fontWeight.black,
+    letterSpacing: 1,
+  },
+  purchaseTitle: {
+    color: palette.white,
+    fontSize: typeScale.bodySm,
+    fontWeight: fontWeight.black,
+    marginTop: 3,
+  },
+  purchaseHint: {
+    color: palette.textMuted,
+    fontSize: 10,
+    lineHeight: 16,
+    textAlign: 'right',
+    marginTop: 3,
+  },
+  purchaseRail: {
+    gap: spacing.sm,
+  },
+  purchaseCard: {
+    width: 132,
+    minHeight: 154,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: palette.line,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    padding: spacing.sm,
+    alignItems: 'flex-end',
+  },
+  purchaseCardActive: {
+    borderColor: 'rgba(88,244,255,0.30)',
+    backgroundColor: 'rgba(88,244,255,0.07)',
+  },
+  purchaseImage: {
+    width: '100%',
+    height: 80,
+    borderRadius: radii.md,
+    backgroundColor: palette.surface,
+  },
+  purchaseNoImage: {
+    width: '100%',
+    height: 80,
+    borderRadius: radii.md,
+    backgroundColor: 'rgba(88,244,255,0.05)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  purchaseNoImageText: {
+    color: palette.cyan,
+    fontSize: 22,
+  },
+  purchaseCardTitle: {
+    color: palette.text,
+    fontSize: 11,
+    fontWeight: fontWeight.black,
+    textAlign: 'right',
+    marginTop: spacing.xs,
+  },
+  purchaseCardMeta: {
+    color: palette.textDim,
+    fontSize: 8,
+    marginTop: 3,
   },
   target: {
     minHeight: 90,

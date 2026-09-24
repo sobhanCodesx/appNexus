@@ -1,35 +1,43 @@
+import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { fontWeight, layout, palette, radii, spacing, typeScale } from '@/design';
+import { fontFamily, fontWeight, layout, palette, shadow, spacing, typeScale } from '@/design';
+import { LivePulse } from './motion-primitives';
 import { PressableScale } from './pressable-scale';
+import { StoryTray } from '@/components/stories/story-tray';
 
 export function PageHeader({
   title,
   subtitle,
   onSearch,
   avatarUrl,
+  showStories = true,
 }: {
   title: string;
   subtitle?: string;
   onSearch?: () => void;
   avatarUrl?: string | null;
+  showStories?: boolean;
 }) {
   return (
-    <View style={styles.root}>
-      <View style={styles.actions}>
+    <View>
+      <View style={styles.root}>
+      <View style={styles.leading}>
         {avatarUrl ? (
-          <View style={styles.avatarWrap}>
+          <View style={styles.avatarHalo}>
             <Image source={{ uri: avatarUrl }} style={styles.avatar} contentFit="cover" />
           </View>
         ) : (
-          <View style={styles.brandDot}>
-            <View style={styles.brandDotCore} />
+          <View style={styles.brandMark}>
+            <View style={styles.brandCore} />
+            <View style={styles.brandSpark} />
           </View>
         )}
 
         {onSearch ? (
           <PressableScale accessibilityRole="button" onPress={onSearch} style={styles.searchButton}>
+            <BlurView intensity={32} tint="dark" style={StyleSheet.absoluteFill} />
             <View style={styles.searchLens} />
             <View style={styles.searchHandle} />
           </PressableScale>
@@ -37,9 +45,14 @@ export function PageHeader({
       </View>
 
       <View style={styles.copy}>
-        {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+        <View style={styles.signalRow}>
+          <LivePulse size={5} color={palette.cyan} />
+          <Text style={styles.subtitle}>{subtitle || 'PLAYNEXUS SIGNAL'}</Text>
+        </View>
         <Text style={styles.title}>{title}</Text>
       </View>
+      </View>
+      {showStories ? <StoryTray /> : null}
     </View>
   );
 }
@@ -54,70 +67,110 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.md,
   },
-  copy: { flex: 1, alignItems: 'flex-end' },
+  copy: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  signalRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 7,
+    marginBottom: 4,
+  },
+  signalDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 6,
+    backgroundColor: palette.cyan,
+    ...shadow.cyanGlow,
+  },
   subtitle: {
     color: palette.textMuted,
-    fontSize: typeScale.caption,
-    fontWeight: fontWeight.medium,
-    marginBottom: spacing.xxs,
+    fontSize: typeScale.micro,
+    fontFamily: fontFamily.bold,
+    fontWeight: fontWeight.bold,
+    letterSpacing: 0.7,
   },
   title: {
-    color: palette.text,
-    fontSize: typeScale.displaySm,
+    color: palette.white,
+    fontSize: 29,
+    lineHeight: 34,
+    fontFamily: fontFamily.black,
     fontWeight: fontWeight.black,
     textAlign: 'right',
+    letterSpacing: -0.7,
   },
-  actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  leading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
   searchButton: {
-    width: layout.touchTarget,
-    height: layout.touchTarget,
-    borderRadius: radii.md,
+    width: 44,
+    height: 44,
+    borderRadius: 17,
+    overflow: 'hidden',
     borderWidth: 1,
-    borderColor: palette.line,
-    backgroundColor: 'rgba(255,255,255,0.045)',
+    borderColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(255,255,255,0.035)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   searchLens: {
-    width: 15,
-    height: 15,
-    borderRadius: 15,
-    borderWidth: 2,
-    borderColor: palette.text,
+    width: 14,
+    height: 14,
+    borderRadius: 14,
+    borderWidth: 1.8,
+    borderColor: palette.white,
     transform: [{ translateX: -2 }, { translateY: -2 }],
   },
   searchHandle: {
     position: 'absolute',
     width: 8,
-    height: 2,
+    height: 1.8,
     borderRadius: 2,
-    backgroundColor: palette.text,
+    backgroundColor: palette.white,
     transform: [{ rotate: '45deg' }, { translateX: 6 }, { translateY: 5 }],
   },
-  brandDot: {
-    width: layout.touchTarget,
-    height: layout.touchTarget,
-    borderRadius: radii.md,
+  brandMark: {
+    width: 44,
+    height: 44,
+    borderRadius: 17,
     borderWidth: 1,
-    borderColor: 'rgba(77,163,255,0.28)',
-    backgroundColor: 'rgba(77,163,255,0.09)',
+    borderColor: 'rgba(88,244,255,0.20)',
+    backgroundColor: 'rgba(24,124,255,0.08)',
     alignItems: 'center',
     justifyContent: 'center',
+    ...shadow.glow,
   },
-  brandDotCore: {
-    width: 16,
-    height: 16,
-    borderRadius: 6,
+  brandCore: {
+    width: 15,
+    height: 15,
+    borderRadius: 5,
     backgroundColor: palette.blue,
     transform: [{ rotate: '45deg' }],
   },
-  avatarWrap: {
-    width: layout.touchTarget,
-    height: layout.touchTarget,
-    borderRadius: radii.md,
+  brandSpark: {
+    position: 'absolute',
+    top: 9,
+    right: 10,
+    width: 5,
+    height: 5,
+    borderRadius: 5,
+    backgroundColor: palette.cyan,
+  },
+  avatarHalo: {
+    width: 44,
+    height: 44,
+    borderRadius: 17,
     padding: 2,
     borderWidth: 1,
-    borderColor: 'rgba(77,163,255,0.35)',
+    borderColor: 'rgba(88,244,255,0.28)',
+    backgroundColor: 'rgba(24,124,255,0.08)',
+    ...shadow.glow,
   },
-  avatar: { flex: 1, borderRadius: radii.md - 3 },
+  avatar: {
+    flex: 1,
+    borderRadius: 14,
+  },
 });

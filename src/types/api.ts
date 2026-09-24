@@ -14,6 +14,9 @@ export type HomeSlide = {
   title?: string | null;
   eyebrow?: string | null;
   description?: string | null;
+  link_type?: string | null;
+  button_url?: string | null;
+  button_label?: string | null;
   mobile_image_url?: ImageUrl;
   desktop_image_url?: ImageUrl;
 };
@@ -34,6 +37,8 @@ export type ContentChannel = {
   slug?: string;
   url?: string;
   avatar_url?: ImageUrl;
+  logo_url?: ImageUrl;
+  cover_url?: ImageUrl;
 };
 
 export type ContentCard = {
@@ -51,10 +56,19 @@ export type ContentCard = {
   feed_type?: string | null;
   badge?: string | null;
   likes_count?: number;
+  dislikes_count?: number;
   comments_count?: number;
+  user_reaction?: 'like' | 'dislike' | null;
   is_liked?: boolean;
+  is_saved?: boolean;
   allow_comments?: boolean;
   published_at?: string | null;
+  media?: {
+    type?: string | null;
+    url?: ImageUrl;
+    thumbnail?: ImageUrl;
+    duration?: number | null;
+  }[];
   channel?: ContentChannel | null;
   game?: {
     id: number;
@@ -62,6 +76,17 @@ export type ContentCard = {
     slug: string;
     cover_url?: ImageUrl;
   } | null;
+};
+
+export type VideoPlaylistContext = {
+  id: number;
+  title: string;
+  slug: string;
+  image_url?: ImageUrl;
+  channel_name?: string | null;
+  is_public?: boolean;
+  current_id?: number;
+  items?: ContentCard[];
 };
 
 export type ContentDetailPayload = {
@@ -77,7 +102,7 @@ export type ContentDetailPayload = {
     subscribers_count?: number;
     is_subscribed?: boolean;
   }) | null;
-  playlist?: Record<string, unknown> | null;
+  playlist?: VideoPlaylistContext | null;
   related?: ContentCard[];
 };
 
@@ -90,11 +115,122 @@ export type StudioCard = {
   channels_count?: number;
 };
 
+export type NexusLatestItem = {
+  key: string;
+  kind: 'feed' | 'video' | 'studio' | 'game' | 'product';
+  id: number;
+  title: string;
+  subtitle?: string | null;
+  slug: string;
+  image_url?: ImageUrl;
+  url?: string | null;
+  created_at?: string | null;
+};
+
+export type HomeGame = {
+  id: number;
+  name: string;
+  slug: string;
+  developer?: string | null;
+  publisher?: string | null;
+  cover_url?: ImageUrl;
+  background_url?: ImageUrl;
+  created_at?: string | null;
+  studio?: {
+    id: number;
+    name: string;
+    slug: string;
+    logo_url?: ImageUrl;
+  } | null;
+};
+
+export type HomeProduct = {
+  id: number;
+  title: string;
+  slug: string;
+  category?: string | null;
+  badge?: string | null;
+  availability?: string | null;
+  stock?: number | null;
+  trade_enabled?: boolean;
+  cover_url?: ImageUrl;
+  pricing?: {
+    regular_price?: number;
+    sale_price?: number;
+    final_price?: number;
+    discount_amount?: number;
+    is_partner_price?: boolean;
+  };
+};
+
+export type HomeCategory = {
+  id: number;
+  name: string;
+  slug: string;
+  image_url?: ImageUrl;
+  products_count?: number;
+};
+
+export type HomeChannel = {
+  id: number;
+  name: string;
+  slug: string;
+  image_url?: ImageUrl;
+  videos_count?: number;
+  subscribers_count?: number;
+};
+
+export type HomeMixedItem = {
+  key: string;
+  type: 'product' | 'video';
+  id: number;
+  title: string;
+  slug: string;
+  image_url?: ImageUrl;
+  eyebrow?: string | null;
+  published_at?: string | null;
+  duration?: number | null;
+  views?: number;
+  pricing?: HomeProduct['pricing'];
+};
+
+export type HomeContentSection = {
+  id: number;
+  title: string;
+  subtitle?: string | null;
+  content_type: 'products' | 'categories' | 'games' | 'brands' | 'platforms' | 'posts' | 'videos' | 'shorts' | string;
+  layout?: string | null;
+  items: (HomeProduct | ContentCard | {
+    id: number;
+    title: string;
+    slug?: string | null;
+    eyebrow?: string | null;
+    excerpt?: string | null;
+    image_url?: ImageUrl;
+  })[];
+};
+
 export type HomePayload = {
+  settings?: Record<string, unknown>;
   slides?: HomeSlide[];
+  categories?: HomeCategory[];
+  featured_products?: HomeProduct[];
+  latest_products?: HomeProduct[];
   latest_feed?: ContentCard[];
+  latest_videos?: ContentCard[];
+  latest_games?: HomeGame[];
+  nexus_latest?: NexusLatestItem[];
   game_radar?: GameRadarItem[];
+  quick_portal_thumbnails?: {
+    radar?: ImageUrl;
+    shorts?: ImageUrl;
+    explore?: ImageUrl;
+    store?: ImageUrl;
+  };
   latest_studios?: StudioCard[];
+  content_sections?: HomeContentSection[];
+  fresh_content?: HomeMixedItem[];
+  channels?: HomeChannel[];
   personalized_home?: {
     feed?: ContentCard[];
     videos?: ContentCard[];
@@ -125,11 +261,24 @@ export type ProfilePayload = {
   profile: {
     id: number;
     name: string;
+    first_name?: string | null;
+    last_name?: string | null;
     email?: string | null;
     phone?: string | null;
+    birth_date?: string | null;
     avatar_url?: ImageUrl;
     wallet_balance?: number;
     role?: string;
+    has_password?: boolean;
+    email_verified?: boolean;
+    phone_verified?: boolean;
+    telegram_connected?: boolean;
+  };
+  notification_preferences?: {
+    sms_enabled?: boolean;
+    email_enabled?: boolean;
+    feed_enabled?: boolean;
+    telegram_enabled?: boolean;
   };
   wallet_balance?: number;
   unread_notifications_count?: number;

@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - native-premium-v1
+      - premium-ui-v2
     paths:
       - package.json
       - .github/workflows/sync-native-deps.yml
@@ -12,7 +13,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: native-dependency-lock
+  group: native-dependency-lock-${{ github.ref_name }}
   cancel-in-progress: false
 
 jobs:
@@ -21,7 +22,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: native-premium-v1
+          ref: ${{ github.ref_name }}
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
@@ -35,15 +36,17 @@ jobs:
             exit 0
           fi
 
+          BRANCH="${GITHUB_REF_NAME}"
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add package-lock.json
           git commit -m "chore(native): sync dependency lockfile"
 
           for attempt in 1 2 3 4 5; do
-            git fetch origin native-premium-v1
-            git rebase origin/native-premium-v1
-            if git push origin HEAD:native-premium-v1; then
+            git fetch origin "${BRANCH}"
+            git rebase "origin/${BRANCH}"
+            if git push origin "HEAD:${BRANCH}"; then
               exit 0
             fi
             sleep 2
